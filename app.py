@@ -1,102 +1,277 @@
 from flask import Flask, render_template, request, send_file
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image, PageBreak, Table, TableStyle, HRFlowable
+from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Image,
+    Table, TableStyle, HRFlowable, KeepTogether)
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import inch
+from reportlab.lib.units import inch, mm
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
+from reportlab.pdfgen import canvas
+from reportlab.lib.utils import ImageReader
 from datetime import datetime
-import os, io
+import os, io, random, string, struct, zlib
 
 app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+W, H = A4  # 595.27 x 841.89 pts
 
-def get_path(f): return os.path.join(BASE_DIR, "static", f)
+DARK  = colors.HexColor('#0d2b5e')
+CYAN  = colors.HexColor('#00aec7')
+BG    = colors.HexColor('#fdf6e3')   # warm cream like OMVSAB
+WHITE = colors.white
+GRAY  = colors.HexColor('#555555')
+LGRAY = colors.HexColor('#dddddd')
+
+def gp(name): return os.path.join(BASE_DIR, "static", name)
+
+def ref_no():
+    return "APC/HRD/" + datetime.now().strftime('%Y') + "/OFF-" + \
+           ''.join(random.choices(string.digits, k=3))
+
+# ── Numbered section paragraph ──────────────────────────────────────────────
+def sec(num, title, text, body_st):
+    bold = ParagraphStyle('bold_sec', fontSize=10, fontName='Helvetica-Bold',
+                          textColor=DARK, spaceAfter=2)
+    items = [Paragraph(f"{num}. {title}", bold),
+             Paragraph(text, body_st)]
+    return KeepTogether(items)
+
+# ── Canvas callback: background + header + footer every page ────────────────
+class LetterCanvas(canvas.Canvas):
+    def __init__(self, buf, data):
+        super().__init__(buf, pagesize=A4)
+        self.data = data
+        self._saved_page_states = []
+
+    def showPage(self):
+        self._saved_page_states.append(dict(self.__dict__))
+        self._startPage()
+
+    def save(self):
+        for state in self._saved_page_states:
+            self.__dict__.update(state)
+            self._draw_page()
+            canvas.Canvas.showPage(self)
+        canvas.Canvas.save(self)
+
+    def _draw_page(self):
+        self.saveState()
+        # Cream background
+        self.setFillColor(BG)
+        self.rect(0, 0, W, H, fill=1, stroke=0)
+
+        # ── HEADER ──
+        logo = gp("logo.png")
+        if os.path.exists(logo):
+            self.drawImage(logo, 36, H-90, width=90, height=50,
+                           preserveAspectRatio=True, mask='auto')
+
+        self.setFillColor(DARK)
+        self.setFont("Helvetica-Bold", 22)
+        self.drawRightString(W-36, H-58, "APARAITECH SOFTWARE COMPANY")
+        self.setFont("Helvetica", 10)
+        self.setFillColor(CYAN)
+        self.drawRightString(W-36, H-72, "We Build Your Vision")
+
+        # Top divider
+        self.setStrokeColor(LGRAY)
+        self.setLineWidth(0.8)
+        self.line(36, H-98, W-36, H-98)
+
+        # ── FOOTER ──
+        self.setStrokeColor(LGRAY)
+        self.line(36, 52, W-36, 52)
+        self.setFont("Helvetica", 7.5)
+        self.setFillColor(GRAY)
+        footer = ("Registered Office: Baramati, Pune – 412306, Maharashtra, India   |   "
+                  "Email: hr@aparaitech.com   |   Web: www.aparaitech.com")
+        self.drawCentredString(W/2, 38, footer)
+
+        self.restoreState()
 
 def build_pdf(data):
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=0.75*inch, leftMargin=0.75*inch, topMargin=0.5*inch, bottomMargin=0.5*inch)
-    styles = getSampleStyleSheet()
+    buf = io.BytesIO()
 
-    h1 = ParagraphStyle('H1', fontSize=18, fontName='Helvetica-Bold', textColor=colors.HexColor('#0d2b5e'), alignment=TA_CENTER, spaceAfter=4)
-    h2 = ParagraphStyle('H2', fontSize=13, fontName='Helvetica-Bold', textColor=colors.HexColor('#00aec7'), alignment=TA_CENTER, spaceAfter=6)
-    body = ParagraphStyle('Body', fontSize=10.5, fontName='Helvetica', leading=18, textColor=colors.HexColor('#222222'), alignment=TA_JUSTIFY, spaceAfter=8)
-    sec = ParagraphStyle('Sec', fontSize=14, fontName='Helvetica-Bold', textColor=colors.HexColor('#0d2b5e'), spaceBefore=10, spaceAfter=8)
-    bul = ParagraphStyle('Bul', fontSize=10.5, fontName='Helvetica', leading=18, leftIndent=20, textColor=colors.HexColor('#222222'), spaceAfter=6)
+    body = ParagraphStyle('body', fontSize=10, fontName='Helvetica',
+        leading=16, textColor=colors.HexColor('#222222'),
+        alignment=TA_JUSTIFY, spaceAfter=6)
+    bold = ParagraphStyle('bold', fontSize=10, fontName='Helvetica-Bold',
+        leading=16, textColor=DARK, spaceAfter=4)
+    center_title = ParagraphStyle('ct', fontSize=14, fontName='Helvetica-Bold',
+        textColor=DARK, alignment=TA_CENTER, spaceAfter=2, spaceBefore=4)
+    center_sub = ParagraphStyle('cs', fontSize=10, fontName='Helvetica',
+        textColor=GRAY, alignment=TA_CENTER, spaceAfter=8)
+    right_st = ParagraphStyle('rt', fontSize=10, fontName='Helvetica',
+        textColor=colors.HexColor('#222222'), alignment=TA_RIGHT, spaceAfter=4)
+    small = ParagraphStyle('sm', fontSize=8.5, fontName='Helvetica',
+        textColor=GRAY, spaceAfter=2)
 
     E = []
-    HR = lambda: HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#00aec7'), spaceAfter=10)
+    SP = lambda n=6: Spacer(1, n)
 
-    # Page 1 - Offer Letter
-    logo = get_path("logo.png")
-    if os.path.exists(logo):
-        img = Image(logo, width=1.8*inch, height=0.9*inch); img.hAlign='LEFT'; E.append(img)
-    E.append(HRFlowable(width="100%", thickness=2, color=colors.HexColor('#00aec7'), spaceAfter=8))
-    E.append(Paragraph("APARAITECH SOFTWARE COMPANY", h1))
-    E.append(Paragraph("OFFER LETTER", h2))
-    E.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor('#dddddd'), spaceAfter=12))
+    ref = data.get('ref', ref_no())
+    date_str = datetime.now().strftime('%d %B %Y')
+    joining = data['joining_date']
+    try:
+        joining = datetime.strptime(joining, '%Y-%m-%d').strftime('%d %B %Y')
+    except: pass
 
-    E.append(Paragraph(f"<b>Date:</b> {datetime.now().strftime('%d %B %Y')}", body))
-    E.append(Spacer(1,6))
-    E.append(Paragraph(f"<b>To,</b><br/>{data['employee_name']}<br/>{data['department']}<br/>{data['college']}", body))
-    E.append(Spacer(1,10))
-    E.append(Paragraph(f"Dear <b>{data['employee_name']}</b>,", body))
-    E.append(Paragraph(f"We are pleased to offer you the position of <b>{data['position']}</b> at <b>Aparaitech Software Company</b>, Baramati. After reviewing your profile and interview performance, we are confident that you will be a valuable addition to our team.", body))
+    # Ref + Date
+    E.append(SP(4))
+    ref_tbl = Table([
+        [Paragraph(f"<b>Ref:</b> {ref}", body),
+         Paragraph(f"<b>Date:</b> {date_str}", right_st)]
+    ], colWidths=[240, 240])
+    ref_tbl.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'TOP')]))
+    E.append(ref_tbl)
+    E.append(SP(10))
 
-    rows = [["Designation", data['position']], ["Date of Joining", data['joining_date']], ["Training Duration","4 Months"], ["Location","Baramati, Maharashtra"], ["Stipend",f"\u20b9{data['stipend']} per month"], ["Employment Type","Internship / Training"]]
-    tbl = Table(rows, colWidths=[2.2*inch, 4.5*inch])
-    tbl.setStyle(TableStyle([('BACKGROUND',(0,0),(0,-1),colors.HexColor('#e8f6fb')),('TEXTCOLOR',(0,0),(0,-1),colors.HexColor('#0d2b5e')),('FONTNAME',(0,0),(0,-1),'Helvetica-Bold'),('FONTNAME',(1,0),(1,-1),'Helvetica'),('FONTSIZE',(0,0),(-1,-1),10.5),('GRID',(0,0),(-1,-1),0.5,colors.HexColor('#cccccc')),('TOPPADDING',(0,0),(-1,-1),7),('BOTTOMPADDING',(0,0),(-1,-1),7),('LEFTPADDING',(0,0),(-1,-1),10)]))
-    E.append(Spacer(1,8)); E.append(tbl); E.append(Spacer(1,12))
-    E.append(Paragraph("This offer is subject to successful completion of your training period and adherence to company policies. We look forward to your contribution and growth with us.", body))
-    E.append(Spacer(1,16))
-    E.append(Paragraph("Yours sincerely,", body))
+    # Title
+    E.append(Paragraph("-", center_sub))
+    E.append(Paragraph("OFFER &amp; APPOINTMENT LETTER", center_title))
+    E.append(Paragraph("-", center_sub))
+    E.append(SP(8))
 
-    sp, st = get_path("signature.png"), get_path("stamp.png")
-    if os.path.exists(sp) and os.path.exists(st):
-        sig = Image(sp, width=1.8*inch, height=0.7*inch)
-        stm = Image(st, width=1.3*inch, height=1.3*inch)
-        row = Table([[sig, stm]], colWidths=[3*inch, 3.7*inch])
-        row.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'MIDDLE')])); E.append(row)
-    elif os.path.exists(sp):
-        E.append(Image(sp, width=1.8*inch, height=0.7*inch))
-    E.append(Paragraph("<b>HR Department</b><br/>Aparaitech Software Company", body))
+    # To block
+    E.append(Paragraph("To,", body))
+    E.append(Paragraph(f"<b>Mr./Ms. {data['employee_name']}</b>", bold))
+    E.append(Paragraph(f"{data['college']}, {data['department']}.", body))
+    E.append(SP(6))
+    E.append(Paragraph(f"<b>Subject:</b> Appointment for the post of {data['position']}", body))
+    E.append(SP(6))
+    E.append(Paragraph(f"Dear {data['employee_name']},", body))
+    E.append(SP(4))
+    E.append(Paragraph(
+        f"Congratulations! With reference to your interview, we are pleased to offer you the position of "
+        f"<b>{data['position']}</b> at <b>APARAITECH SOFTWARE COMPANY</b>, subject to the terms and "
+        f"conditions mentioned below.", body))
+    E.append(SP(10))
 
-    # Page 2 - Training Policy
-    E.append(PageBreak()); E.append(Paragraph("Training Policy", sec)); E.append(HR())
-    for p in ["Candidate must follow all company rules and regulations strictly.","Working hours: <b>10:00 AM to 7:30 PM</b> (Monday to Saturday).","Notice period is <b>1 Month</b>.","Confidentiality of company data and client information must be maintained at all times.","Pre-Placement Offer (PPO) is performance-based and not guaranteed.","Candidates are expected to maintain professional conduct throughout the training.","Any violation of policies may result in immediate termination of training."]:
-        E.append(Paragraph(f"&#x2022;  {p}", bul))
+    # Sections
+    E.append(sec("1","Appointment Details",
+        f"You are appointed as <b>{data['position']}</b> at our Baramati Office. Your services may be "
+        f"transferred to any department or location of the company, as and when required.<br/>"
+        f"Your joining date shall be <b>{joining}</b>.<br/>"
+        f"You will be on internship for <b>4 Months</b>, after which you will be confirmed subject to "
+        f"satisfactory performance.", body))
+    E.append(SP(6))
 
-    # Page 3 - Rules
-    E.append(PageBreak()); E.append(Paragraph("Rules & Regulations", sec)); E.append(HR())
-    for r in ["Office discipline is mandatory at all times.","Attendance and punctuality must be strictly maintained.","<b>English communication</b> is required in the workplace.","Leave must be informed and approved in advance.","Misconduct or insubordination may lead to immediate termination.","Mobile phone usage during working hours should be limited to official purposes.","Candidates must maintain a clean and organized work environment."]:
-        E.append(Paragraph(f"&#x2022;  {r}", bul))
+    E.append(sec("2","Monthly Emoluments",
+        f"You will be paid a monthly stipend/salary of <b>\u20b9{data['stipend']}</b> during the internship period.",
+        body))
+    E.append(SP(6))
 
-    # Page 4 - Annexure
-    E.append(PageBreak()); E.append(Paragraph("Annexure \u2013 Documents Required", sec)); E.append(HR())
-    E.append(Paragraph("Please bring the following original documents on the date of joining:", body))
-    for d in ["SSC & HSC Marksheets (Originals + Photocopies)","Latest College Marksheet","2 Passport Size Photographs","PAN Card / Aadhaar Card","Bank Account Details (Passbook or Cancelled Cheque)","Original Documents for verification"]:
-        E.append(Paragraph(f"&#x2022;  {d}", bul))
+    E.append(sec("3","Notice Period",
+        "During the probation period, either party may terminate employment by giving <b>15 days'</b> written "
+        "notice. If you resign within 1 year from confirmation, the notice period shall be 15 days. "
+        "After 1 year, the notice period shall be <b>30 days</b>.", body))
+    E.append(SP(6))
 
-    # Page 5 - Salary
-    E.append(PageBreak()); E.append(Paragraph("Performance Based Salary Structure", sec)); E.append(HR())
-    srows = [["Parameter","Details"],["Revenue Target","\u20b91,00,000 per month"],["Training Period","4 Months"],["Stipend",f"\u20b9{data['stipend']} per month"],["Stipend Eligibility","On achieving 100% monthly target"],["Salary Type","Performance-based"],["PPO","Based on overall performance"]]
-    st2 = Table(srows, colWidths=[3*inch, 3.7*inch])
-    st2.setStyle(TableStyle([('BACKGROUND',(0,0),(-1,0),colors.HexColor('#0d2b5e')),('TEXTCOLOR',(0,0),(-1,0),colors.white),('FONTNAME',(0,0),(-1,0),'Helvetica-Bold'),('FONTSIZE',(0,0),(-1,-1),10.5),('BACKGROUND',(0,1),(0,-1),colors.HexColor('#e8f6fb')),('FONTNAME',(0,1),(0,-1),'Helvetica-Bold'),('TEXTCOLOR',(0,1),(0,-1),colors.HexColor('#0d2b5e')),('GRID',(0,0),(-1,-1),0.5,colors.HexColor('#aaaaaa')),('TOPPADDING',(0,0),(-1,-1),8),('BOTTOMPADDING',(0,0),(-1,-1),8),('LEFTPADDING',(0,0),(-1,-1),10)]))
-    E.append(st2); E.append(Spacer(1,20))
-    E.append(Paragraph("Note: Stipend will be credited only upon achieving the defined monthly revenue target. Aparaitech reserves the right to modify the salary structure based on business requirements.", body))
+    E.append(sec("4","Working Hours",
+        "The company follows a <b>6-day work week (9 hours/day)</b>, Monday to Saturday, 10:00 AM – 7:30 PM. "
+        "The company reserves the right to modify policies as required.", body))
+    E.append(SP(6))
 
-    doc.build(E)
-    buffer.seek(0)
-    return buffer
+    E.append(sec("5","Leave Entitlement",
+        "<b>7 days</b> Casual Leave and <b>15 days</b> Paid Leave per calendar year.", body))
+    E.append(SP(6))
+
+    E.append(sec("6","Confidentiality &amp; Conduct",
+        "You shall not disclose any confidential information, source code, or client data. All work developed "
+        "during your tenure remains the property of the company.", body))
+    E.append(SP(6))
+
+    E.append(sec("7","Termination Clause",
+        "If any provided information is found to be incorrect, the company reserves the right to terminate "
+        "services without notice.", body))
+    E.append(SP(14))
+
+    E.append(Paragraph(
+        "Please sign and return the duplicate copy of this letter as a token of acceptance. "
+        "We look forward to a long and mutually rewarding association with you.", body))
+    E.append(SP(16))
+
+    # Signature block
+    E.append(Paragraph("<b>For APARAITECH SOFTWARE COMPANY</b>", bold))
+    E.append(SP(6))
+
+    sign_p, stamp_p = gp("signature.png"), gp("stamp.png")
+    se, te = os.path.exists(sign_p), os.path.exists(stamp_p)
+
+    sig_cell, stm_cell = [], []
+    if se: sig_cell = [Image(sign_p, width=1.6*inch, height=0.65*inch)]
+    if te: stm_cell = [Image(stamp_p, width=1.1*inch, height=1.1*inch)]
+
+    if se or te:
+        row = Table([[sig_cell or [""], stm_cell or [""]]],
+                    colWidths=[3*inch, 3*inch])
+        row.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'MIDDLE')]))
+        E.append(row)
+        E.append(SP(4))
+
+    digi = ParagraphStyle('digi', fontSize=8, fontName='Courier',
+        textColor=GRAY, alignment=TA_RIGHT)
+    E.append(Paragraph(
+        f"Digitally Signed by<br/>Authorized Signatory<br/>"
+        f"Date: {datetime.now().strftime('%Y.%m.%d %H:%M:%S')} IST", digi))
+    E.append(SP(4))
+    E.append(Paragraph("<b>Managing Director</b>", bold))
+
+    # Build
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+        rightMargin=36, leftMargin=36,
+        topMargin=110, bottomMargin=66,
+        encrypt=None)
+
+    lc = LetterCanvas(buf, data)
+    doc.build(E, canvasmaker=lambda *a, **kw: LetterCanvas(buf, data))
+
+    # Encrypt to make non-editable (no password to open, no editing)
+    raw = buf.getvalue()
+    encrypted = encrypt_pdf(raw)
+    out = io.BytesIO(encrypted)
+    out.seek(0)
+    return out
+
+# ── Minimal PDF encryption (RC4 40-bit, restrict editing) ───────────────────
+def encrypt_pdf(pdf_bytes):
+    """Add owner password encryption to restrict editing/copying."""
+    import hashlib, re
+    # We'll use pikepdf if available, else return as-is
+    try:
+        import pikepdf
+        src = io.BytesIO(pdf_bytes)
+        dst = io.BytesIO()
+        with pikepdf.open(src) as pdf:
+            pdf.save(dst, encryption=pikepdf.Encryption(
+                owner="aparaitech_owner_2026",
+                user="",           # no password to open
+                allow=pikepdf.Permissions(
+                    print_highres=True,
+                    print_lowres=True,
+                    extract=False,
+                    modify_annotation=False,
+                    modify_assembly=False,
+                    modify_form=False,
+                    modify_other=False,
+                    accessibility=True,
+                )
+            ))
+        dst.seek(0)
+        return dst.read()
+    except ImportError:
+        return pdf_bytes   # fallback: return unencrypted
+
 
 @app.route("/")
 def home(): return render_template("index.html")
 
 @app.route("/generate", methods=["POST"])
 def generate():
-    data = {k: request.form[k] for k in ["employee_name","college","department","position","joining_date","stipend"]}
+    data = {k: request.form[k] for k in
+            ["employee_name","college","department","position","joining_date","stipend"]}
     buf = build_pdf(data)
-    fname = f"{data['employee_name'].replace(' ','_')}_offer_letter.pdf"
+    fname = f"{data['employee_name'].replace(' ','_')}_Aparaitech_Offer_Letter.pdf"
     return send_file(buf, as_attachment=True, download_name=fname, mimetype="application/pdf")
 
 if __name__ == "__main__":
