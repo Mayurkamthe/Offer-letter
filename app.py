@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, send_file, jsonify
+from flask import Flask, render_template, request, send_file, jsonify, session, redirect, url_for, flash
 from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Image, Table,
     TableStyle, BaseDocTemplate, Frame, PageTemplate, KeepTogether, PageBreak)
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -7,6 +7,8 @@ from reportlab.lib.units import inch
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_RIGHT, TA_LEFT
 from datetime import datetime
+from functools import wraps
+from dotenv import load_dotenv
 import os, io, random, string
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -14,10 +16,16 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 
+load_dotenv()
+
 app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 W, H = A4
 
+# ── Auth Config ───────────────────────────────────────────────
+app.secret_key  = os.environ.get("SECRET_KEY", "change-me-in-env")
+LOGIN_USER      = os.environ.get("LOGIN_UID", "admin")
+LOGIN_PASS      = os.environ.get("LOGIN_PASS", "aparaitech@123")
 # ── SMTP Config ──────────────────────────────────────────────
 SMTP_HOST     = os.environ.get("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT     = int(os.environ.get("SMTP_PORT", 587))
@@ -25,6 +33,14 @@ SMTP_USER     = os.environ.get("SMTP_USER", "your@gmail.com")
 SMTP_PASS     = os.environ.get("SMTP_PASS", "your_app_password")
 SMTP_FROM     = os.environ.get("SMTP_FROM", SMTP_USER)
 # ─────────────────────────────────────────────────────────────
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get('logged_in'):
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
 
 # Aparaitech Brand Colors
 DARK = colors.HexColor('#0d2b5e')
@@ -342,11 +358,31 @@ info@aparaitechsoftware.org | www.aparaitech.org
         server.login(SMTP_USER, SMTP_PASS)
         server.sendmail(SMTP_FROM, to_email, msg.as_string())
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+    if request.method == "POST":
+        uid = request.form.get("uid", "").strip()
+        pwd = request.form.get("password", "").strip()
+        if uid == LOGIN_USER and pwd == LOGIN_PASS:
+            session['logged_in'] = True
+            return redirect(url_for('home'))
+        else:
+            error = "Invalid username or password."
+    return render_template("login.html", error=error)
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
 @app.route("/")
+@login_required
 def home(): 
     return render_template("index.html")
 
 @app.route("/generate", methods=["POST"])
+@login_required
 def generate():
     keys = ["employee_name", "email", "college", "department", "position", "joining_date", "training_end_date", "stipend"]
     data = {k: request.form.get(k, '') for k in keys}

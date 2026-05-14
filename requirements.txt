@@ -2,3 +2,4 @@ flask
 reportlab
 pikepdf
 gunicorn
+python-dotenv
