@@ -34,10 +34,6 @@ def draw_page(c, doc):
     c.setFillColor(CYAN)
     c.rect(0, H-92, W, 4, fill=1, stroke=0)
     
-    # Cyan left sidebar
-    c.setFillColor(CYAN)
-    c.rect(0, 0, 5, H-92, fill=1, stroke=0)
-    
     # Logo in header
     logo = gp("logo.png")
     if os.path.exists(logo):
@@ -54,7 +50,7 @@ def draw_page(c, doc):
     # Footer line
     c.setStrokeColor(CYAN)
     c.setLineWidth(1)
-    c.line(20, 52, W-20, 52)
+    c.line(40, 52, W-40, 52)
     
     # Footer Text
     c.setFont('Helvetica', 7.5)
@@ -63,7 +59,7 @@ def draw_page(c, doc):
         
     # Page Number
     c.setFont('Helvetica', 8)
-    c.drawRightString(W - 30, 20, f"Page {doc.page}")
+    c.drawRightString(W - 40, 20, f"Page {doc.page}")
     c.restoreState()
 
 def build_pdf(data):
@@ -187,8 +183,8 @@ def build_pdf(data):
     ], colWidths=[240, 240])
     E.append(sig_accept_tbl)
 
-    # Document assembly (Adjusted margins to accommodate the Aparaitech header)
-    frame = Frame(35, 60, W - 60, H - 165, id='main')
+    # Document assembly (Adjusted margins: 40px left and right)
+    frame = Frame(40, 60, W - 80, H - 165, id='main')
     pt = PageTemplate(id='Letter', frames=[frame], onPage=draw_page)
     doc = BaseDocTemplate(buf, pagesize=A4, pageTemplates=[pt])
     doc.build(E)
