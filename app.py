@@ -22,7 +22,7 @@ def gp(f): return os.path.join(BASE_DIR, "static", f)
 
 def draw_page(c, doc):
     c.saveState()
-    # White background for the whole page (including header)
+    # White background for the whole page
     c.setFillColorRGB(1, 1, 1)
     c.rect(0, 0, W, H, fill=1, stroke=0)
     
@@ -35,7 +35,7 @@ def draw_page(c, doc):
     if os.path.exists(logo):
         c.drawImage(logo, 14, H-80, width=80, height=60, preserveAspectRatio=True, mask='auto')
         
-    # Company name and Tagline in header (Text changed to DARK blue to be visible on white)
+    # Company name and Tagline in header
     c.setFillColor(DARK)
     c.setFont('Helvetica-Bold', 17)
     c.drawRightString(W-30, H-46, "APARAITECH SOFTWARE COMPANY")
@@ -65,7 +65,7 @@ def build_pdf(data):
     bold  = ParagraphStyle('bold', fontSize=10, fontName='Helvetica-Bold', leading=15, textColor=DARK, spaceAfter=4)
     title = ParagraphStyle('title', fontSize=13, fontName='Helvetica-Bold', textColor=DARK, alignment=TA_CENTER, spaceAfter=12)
     rgt   = ParagraphStyle('rgt', fontSize=10, fontName='Helvetica', textColor=colors.black, alignment=TA_RIGHT)
-    digi  = ParagraphStyle('digi', fontSize=8, fontName='Courier', textColor=GREY, alignment=TA_RIGHT)
+    digi  = ParagraphStyle('digi', fontSize=8, fontName='Courier', textColor=GREY, alignment=TA_LEFT)
 
     def sec(n, head, text):
         return KeepTogether([
@@ -87,10 +87,16 @@ def build_pdf(data):
     E = []
     
     # Top Reference & Date
-    E.append(Table([
+    # Added hAlign='LEFT' and removed padding so it aligns nicely with page margins
+    top_tbl = Table([
         [Paragraph(f"<b>Ref:</b> {ref}", body),
          Paragraph(f"<b>Date:</b> {date_str}", rgt)]
-    ], colWidths=[240, 240]))
+    ], colWidths=[255, 255], hAlign='LEFT')
+    top_tbl.setStyle(TableStyle([
+        ('LEFTPADDING', (0,0), (0,0), 0),
+        ('RIGHTPADDING', (-1,-1), (-1,-1), 0),
+    ]))
+    E.append(top_tbl)
     E.append(SP(12))
     
     # Title
@@ -128,7 +134,6 @@ def build_pdf(data):
         "You will be on probation/internship for a period of six (6) months from the date of joining. During this period, your performance will be evaluated, and upon successful completion, you will be confirmed as a regular employee. The company reserves the right to extend the probation period if deemed necessary."))
     
     stipend = data.get('stipend', '0')
-    # Removed the rupee symbol here
     E.append(sec("4", "Compensation &amp; Benefits", 
         f"Your monthly gross salary/stipend shall be <b>{stipend} (Indian Rupees)</b>. The detailed compensation structure, including all allowances and deductions, will be provided separately in the compensation annexure. Salary will be credited to your designated bank account by the last working day of each month."))
     
@@ -152,19 +157,25 @@ def build_pdf(data):
     E.append(Paragraph("We look forward to a long and mutually rewarding association.", body))
     E.append(SP(16))
     
-    # Signatures
+    # Company Signatures Section
     E.append(Paragraph("<b>For APARAITECH SOFTWARE COMPANY</b>", bold))
     E.append(SP(6))
     
     sp, st = gp("signature.png"), gp("stamp.png")
-    c1 = Image(sp, width=1.5*inch, height=0.6*inch) if os.path.exists(sp) else Paragraph("\n\n(Signature)", body)
-    c2 = Image(st, width=1.1*inch, height=1.1*inch) if os.path.exists(st) else Paragraph("", body)
-    sig_tbl = Table([[c1, c2]], colWidths=[2.5*inch, 2.5*inch])
-    sig_tbl.setStyle(TableStyle([('VALIGN',(0,0),(-1,-1),'MIDDLE')]))
+    # Added <br/> elements for spacing if image doesn't exist
+    c1 = Image(sp, width=1.4*inch, height=0.5*inch) if os.path.exists(sp) else Paragraph("<br/><br/><i>(Signature)</i>", body)
+    c2 = Image(st, width=1.1*inch, height=1.1*inch) if os.path.exists(st) else Paragraph("<br/><br/><i>(Stamp)</i>", body)
+    
+    # FIXED: Added hAlign='LEFT' and set LEFTPADDING to 0 so it aligns correctly under the text.
+    sig_tbl = Table([[c1, c2]], colWidths=[1.6*inch, 1.4*inch], hAlign='LEFT')
+    sig_tbl.setStyle(TableStyle([
+        ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
+        ('LEFTPADDING',(0,0),(0,-1), 0), # Aligns the first column completely left
+    ]))
     E.append(sig_tbl)
     
     E.append(SP(4))
-    E.append(Paragraph(f"Digitally Signed by<br/>Date: {datetime.now().strftime('%d-%m-%Y %H:%M')}<br/>Managing Director", body))
+    E.append(Paragraph(f"Digitally Signed by<br/>Date: {datetime.now().strftime('%d-%m-%Y %H:%M')}<br/><b>Managing Director</b>", digi))
     
     # ----- Page Break for Acceptance Page -----
     E.append(PageBreak())
@@ -175,9 +186,14 @@ def build_pdf(data):
     E.append(Paragraph("I have read and understood the terms and conditions of employment as stated above. I hereby accept this offer and agree to abide by the company's policies and regulations.", body))
     E.append(SP(40))
     
+    # FIXED: Added hAlign='LEFT' to the employee acceptance signature area as well
     sig_accept_tbl = Table([
         [Paragraph("<b>Signature of Employee</b>", body), Paragraph("<b>Date</b>", rgt)]
-    ], colWidths=[240, 240])
+    ], colWidths=[255, 255], hAlign='LEFT')
+    sig_accept_tbl.setStyle(TableStyle([
+        ('LEFTPADDING', (0,0), (0,0), 0),
+        ('RIGHTPADDING', (-1,-1), (-1,-1), 0),
+    ]))
     E.append(sig_accept_tbl)
 
     # Document assembly 
