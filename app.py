@@ -22,13 +22,9 @@ def gp(f): return os.path.join(BASE_DIR, "static", f)
 
 def draw_page(c, doc):
     c.saveState()
-    # White background
+    # White background for the whole page (including header)
     c.setFillColorRGB(1, 1, 1)
     c.rect(0, 0, W, H, fill=1, stroke=0)
-    
-    # Dark blue header bar
-    c.setFillColor(DARK)
-    c.rect(0, H-88, W, 88, fill=1, stroke=0)
     
     # Cyan accent stripe below header
     c.setFillColor(CYAN)
@@ -39,8 +35,8 @@ def draw_page(c, doc):
     if os.path.exists(logo):
         c.drawImage(logo, 14, H-80, width=80, height=60, preserveAspectRatio=True, mask='auto')
         
-    # Company name and Tagline in header
-    c.setFillColorRGB(1, 1, 1)
+    # Company name and Tagline in header (Text changed to DARK blue to be visible on white)
+    c.setFillColor(DARK)
     c.setFont('Helvetica-Bold', 17)
     c.drawRightString(W-30, H-46, "APARAITECH SOFTWARE COMPANY")
     c.setFont('Helvetica', 9)
@@ -132,8 +128,9 @@ def build_pdf(data):
         "You will be on probation/internship for a period of six (6) months from the date of joining. During this period, your performance will be evaluated, and upon successful completion, you will be confirmed as a regular employee. The company reserves the right to extend the probation period if deemed necessary."))
     
     stipend = data.get('stipend', '0')
+    # Removed the rupee symbol here
     E.append(sec("4", "Compensation &amp; Benefits", 
-        f"Your monthly gross salary/stipend shall be <b>\u20b9{stipend} (Indian Rupees)</b>. The detailed compensation structure, including all allowances and deductions, will be provided separately in the compensation annexure. Salary will be credited to your designated bank account by the last working day of each month."))
+        f"Your monthly gross salary/stipend shall be <b>{stipend} (Indian Rupees)</b>. The detailed compensation structure, including all allowances and deductions, will be provided separately in the compensation annexure. Salary will be credited to your designated bank account by the last working day of each month."))
     
     E.append(sec("5", "Working Hours &amp; Attendance", 
         "The company follows a 6-day work week (9 hours/day), Monday through Saturday, 10:00 AM to 7:30 PM. You may be required to work additional hours during critical project phases. Regular and punctual attendance is essential."))
@@ -183,7 +180,7 @@ def build_pdf(data):
     ], colWidths=[240, 240])
     E.append(sig_accept_tbl)
 
-    # Document assembly (Adjusted margins: 40px left and right)
+    # Document assembly 
     frame = Frame(40, 60, W - 80, H - 165, id='main')
     pt = PageTemplate(id='Letter', frames=[frame], onPage=draw_page)
     doc = BaseDocTemplate(buf, pagesize=A4, pageTemplates=[pt])
