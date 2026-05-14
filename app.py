@@ -188,29 +188,36 @@ def build_pdf(data):
     
     sp, st = gp("signature.png"), gp("stamp.png")
     sig_img  = Image(sp, width=1.5*inch, height=0.6*inch) if os.path.exists(sp) else Paragraph("<i>(Signature)</i>", digi)
-    stmp_img = Image(st, width=1.05*inch, height=1.05*inch) if os.path.exists(st) else Paragraph("<i>(Stamp)</i>", digi)
     digi_text = Paragraph(
         f"Digitally Signed by<br/>"
         f"Date: {datetime.now().strftime('%d-%m-%Y %H:%M')}<br/>"
         f"<b>Managing Director</b>", digi)
-    # 2-col table: left=signature+digi text, right=stamp spanning both rows
-    sig_tbl = Table(
-        [[sig_img, stmp_img],
-         [digi_text, ""]],
-        colWidths=[2.4*inch, 1.2*inch],
-        hAlign='LEFT'
-    )
-    sig_tbl.setStyle(TableStyle([
-        ('VALIGN',        (0,0), (-1,-1), 'MIDDLE'),
-        ('LEFTPADDING',   (0,0), (-1,-1), 0),
-        ('RIGHTPADDING',  (0,0), (-1,-1), 4),
-        ('TOPPADDING',    (0,0), (-1,-1), 2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
-        ('SPAN',          (1,0), (1,1)),
-        ('VALIGN',        (1,0), (1,1), 'MIDDLE'),
-        ('ALIGN',         (1,0), (1,1), 'CENTER'),
-    ]))
-    E.append(sig_tbl)
+
+    # Draw signature + digi text block normally
+    E.append(sig_img)
+    E.append(Spacer(1, 4))
+    E.append(digi_text)
+
+    # Stamp overlaid on top using absolute canvas drawing via a custom flowable
+    if os.path.exists(st):
+        from reportlab.platypus import Flowable
+        stamp_path = st
+        class StampOverlay(Flowable):
+            def __init__(self, path, w=1.0*inch, h=1.0*inch, x_off=10, y_off=-10):
+                Flowable.__init__(self)
+                self.path = path
+                self.w = w; self.h = h
+                self.x_off = x_off; self.y_off = y_off
+                self.width = 0; self.height = 0  # takes no vertical space
+            def draw(self):
+                self.canv.drawImage(
+                    self.path,
+                    self.x_off, self.y_off,
+                    width=self.w, height=self.h,
+                    preserveAspectRatio=True, mask='auto'
+                )
+        # Negative height offsets stamp to sit ON top of the digi text above
+        E.append(StampOverlay(stamp_path, w=1.05*inch, h=1.05*inch, x_off=5, y_off=2))
     
     # ----- Page Break for Acceptance Page -----
     E.append(PageBreak())
