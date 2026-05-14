@@ -406,6 +406,8 @@ def generate():
     response = send_file(buf, as_attachment=True, download_name=fname, mimetype="application/pdf")
     response.headers['X-Email-Status'] = email_status
     response.headers['X-Email-Error']  = email_error
+    response.headers['X-Filename']     = fname
+    response.headers['Access-Control-Expose-Headers'] = 'X-Email-Status, X-Email-Error, X-Filename'
     return response
 
 if __name__ == "__main__":
