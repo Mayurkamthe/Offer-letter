@@ -64,7 +64,7 @@ def draw_page(c, doc):
     # Footer Text
     c.setFont('Helvetica', 7.5)
     c.setFillColor(GREY)
-    c.drawCentredString(W/2, 38, "Baramati, Pune – 412306, Maharashtra  |  hr@aparaitech.com  |  www.aparaitech.com")
+    c.drawCentredString(W/2, 38, "Baramati, Pune – 412306, Maharashtra  |  info@aparaitechsoftware.org  |  www.aparaitech.org")
         
     # Page Number
     c.setFont('Helvetica', 8)
@@ -326,7 +326,7 @@ Warm regards,
 HR Department
 Aparaitech Software Company
 Baramati, Pune – 412306
-hr@aparaitech.com | www.aparaitech.com
+info@aparaitechsoftware.org | www.aparaitech.org
 """
     msg.attach(MIMEText(body, 'plain'))
 
