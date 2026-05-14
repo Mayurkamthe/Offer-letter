@@ -154,26 +154,26 @@ def build_pdf(data):
         "You are expected to conduct yourself professionally and ethically at all times. You shall comply with all company policies, rules, and regulations as may be communicated from time to time. Any violation may result in disciplinary action."))
     
     # Section 10 - Mandatory Documents Checklist
+        # Section 10 - Mandatory Documents Checklist (Streamlined)
     docs_list = [
-        "1 signed copy of this Offer Letter (duly signed on all pages)",
-        "SSC (10th Std) Marksheet &amp; Certificate – 1 photocopy + Original for verification",
-        "HSC (12th Std) Marksheet &amp; Certificate – 1 photocopy + Original for verification",
-        "Degree / Diploma / Highest Qualification Certificate + All Semester Marksheets – 1 photocopy + Original for verification",
-        "1 recent passport-size colour photograph (white background)",
-        "PAN Card – Scanned copy + Original for verification",
-        "Aadhaar Card / Voter ID / Driving Licence – Scanned copy + Original for verification",
-        "Bank Account Details: Bank Name, Account Holder Name, Account Number, IFSC Code, Branch Address",
-        "Emergency Contact Details: Name, Relationship, Mobile Number, Address",
-        "Academic Institution Bonafide Certificate / NOC (if applicable)",
+        "<b>Signed Offer Letter:</b> 1 copy signed on all pages.",
+        "<b>Academic Records:</b> SSC, HSC, and Degree/Diploma certificates (Photocopy + Original for verification).",
+        "<b>Identity Proof:</b> PAN Card and Aadhaar/Voter ID/Driving Licence (Photocopy + Original).",
+        "<b>Photographs:</b> 1 recent passport-size color photograph.",
+        "<b>Personal Details:</b> Bank account details (AC No, IFSC) and Emergency contact info.",
+        "<b>Institutional Docs:</b> Bonafide Certificate / NOC (if applicable)."
     ]
+    
     bul = ParagraphStyle('bul', fontSize=9.5, fontName='Helvetica', leading=14, leftIndent=14, textColor=colors.black, spaceAfter=4)
     doc_items = [Paragraph(f"&#x2022;  {d}", bul) for d in docs_list]
+    
     E.append(KeepTogether([
         Paragraph("<b>10. MANDATORY DOCUMENTS – JOINING DAY CHECKLIST</b>", bold),
         Spacer(1, 4),
         *doc_items,
         Spacer(1, 6)
     ]))
+
 
     # Closing
     E.append(Paragraph("We are delighted to welcome you to the APARAITECH SOFTWARE COMPANY family. Please sign and return the duplicate copy of this letter as your acceptance of the terms and conditions mentioned herein.", body))
