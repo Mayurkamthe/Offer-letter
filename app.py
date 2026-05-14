@@ -187,37 +187,57 @@ def build_pdf(data):
     E.append(SP(6))
     
     sp, st = gp("signature.png"), gp("stamp.png")
-    sig_img  = Image(sp, width=1.5*inch, height=0.6*inch) if os.path.exists(sp) else Paragraph("<i>(Signature)</i>", digi)
-    digi_text = Paragraph(
-        f"Digitally Signed by<br/>"
-        f"Date: {datetime.now().strftime('%d-%m-%Y %H:%M')}<br/>"
-        f"<b>Managing Director</b>", digi)
 
-    # Draw signature + digi text block normally
-    E.append(sig_img)
-    E.append(Spacer(1, 4))
-    E.append(digi_text)
+    from reportlab.platypus import Flowable
 
-    # Stamp overlaid on top using absolute canvas drawing via a custom flowable
-    if os.path.exists(st):
-        from reportlab.platypus import Flowable
-        stamp_path = st
-        class StampOverlay(Flowable):
-            def __init__(self, path, w=1.0*inch, h=1.0*inch, x_off=10, y_off=-10):
-                Flowable.__init__(self)
-                self.path = path
-                self.w = w; self.h = h
-                self.x_off = x_off; self.y_off = y_off
-                self.width = 0; self.height = 0  # takes no vertical space
-            def draw(self):
-                self.canv.drawImage(
-                    self.path,
-                    self.x_off, self.y_off,
-                    width=self.w, height=self.h,
-                    preserveAspectRatio=True, mask='auto'
-                )
-        # Negative height offsets stamp to sit ON top of the digi text above
-        E.append(StampOverlay(stamp_path, w=1.05*inch, h=1.05*inch, x_off=5, y_off=2))
+    class SignatureBlock(Flowable):
+        """Draws signature, then stamp overlapping the digi-signed text below it."""
+        def __init__(self, sig_path, stamp_path):
+            Flowable.__init__(self)
+            self.sig_path   = sig_path
+            self.stamp_path = stamp_path
+            self.width  = 4 * inch
+            self.height = 1.6 * inch   # total height reserved
+
+        def draw(self):
+            c = self.canv
+            # -- Signature image: top-left --
+            if os.path.exists(self.sig_path):
+                c.drawImage(self.sig_path,
+                            0, 0.95*inch,
+                            width=1.5*inch, height=0.6*inch,
+                            preserveAspectRatio=True, mask='auto')
+
+            # -- Digi text: below signature --
+            from reportlab.lib.styles import ParagraphStyle
+            from reportlab.lib.enums import TA_LEFT
+            from reportlab.platypus import Paragraph
+            import datetime as dt
+            now = dt.datetime.now().strftime('%d-%m-%Y %H:%M')
+            style = ParagraphStyle('d', fontName='Courier', fontSize=8,
+                                   textColor=colors.HexColor('#555555'),
+                                   leading=12, alignment=TA_LEFT)
+            lines = [f"Digitally Signed by",
+                     f"Date: {now}",
+                     "<b>Managing Director</b>"]
+            y = 0.6 * inch
+            for line in lines:
+                p = Paragraph(line, style)
+                pw, ph = p.wrap(2.5*inch, 20)
+                p.drawOn(c, 0, y)
+                y -= ph + 1
+
+            # -- Stamp: overlapping digi text block, shifted right & centered --
+            if os.path.exists(self.stamp_path):
+                c.drawImage(self.stamp_path,
+                            0.8*inch, -0.05*inch,
+                            width=1.0*inch, height=1.0*inch,
+                            preserveAspectRatio=True, mask='auto')
+
+    E.append(SignatureBlock(
+        sig_path   = sp if os.path.exists(sp) else "",
+        stamp_path = st if os.path.exists(st) else ""
+    ))
     
     # ----- Page Break for Acceptance Page -----
     E.append(PageBreak())
