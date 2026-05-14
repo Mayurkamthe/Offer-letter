@@ -96,7 +96,8 @@
       const blob = await res.blob();
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
-      a.href = url; a.download = res.headers.get('X-Filename') || 'Offer_Letter.pdf'; a.click();
+      const empName = document.querySelector('[name="employee_name"]').value.trim().replace(/\s+/g, '_');
+      a.href = url; a.download = empName + '_Aparaitech_Offer.pdf'; a.click();
       // Show status
       if (status === 'sent') {
         msg.style.background = '#e6f9f0'; msg.style.color = '#1a7a4a';
