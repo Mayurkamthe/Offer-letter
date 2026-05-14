@@ -138,23 +138,26 @@ def build_pdf(data):
     E.append(sec("4", "Compensation &amp; Benefits", 
         f"Your monthly gross salary/stipend shall be <b>{stipend} (Indian Rupees)</b>. The detailed compensation structure, including all allowances and deductions, will be provided separately in the compensation annexure. Salary will be credited to your designated bank account by the last working day of each month."))
     
-    E.append(sec("5", "Working Hours &amp; Attendance", 
+    # New Section 5 added here
+    E.append(sec("5", "Pre-Placement Offer (PPO) &amp; Full-Time Employment", 
+        "After successful completion of the 4-month training period, candidates may be considered for a PPO based on performance, project requirements, academic completion, and position availability. The offered package, if applicable, may range between ₹2.5 LPA to ₹4.5 LPA depending on the final evaluation. APARAITECH reserves the right to extend or decline the PPO at its sole discretion. Completion of the internship does not guarantee full-time employment."))
+    
+    E.append(sec("6", "Working Hours &amp; Attendance", 
         "The company follows a 6-day work week (9 hours/day), Monday through Saturday, 10:00 AM to 7:30 PM. You may be required to work additional hours during critical project phases. Regular and punctual attendance is essential."))
     
-    E.append(sec("6", "Leave Entitlement", 
+    E.append(sec("7", "Leave Entitlement", 
         "You shall be entitled to 15 days of Paid Leave and 7 days of Casual Leave per calendar year, in accordance with company policy. Leave availed shall be subject to prior approval from your reporting manager."))
     
-    E.append(sec("7", "Notice Period &amp; Termination", 
+    E.append(sec("8", "Notice Period &amp; Termination", 
         "During the probation period, either party may terminate the employment by providing fifteen (15) days' written notice. Post confirmation, the notice period shall be thirty (30) days from either side. The company may terminate your services without notice in cases of misconduct, breach of trust, or violation of company policies."))
     
-    E.append(sec("8", "Confidentiality &amp; Intellectual Property", 
+    E.append(sec("9", "Confidentiality &amp; Intellectual Property", 
         "During the course of your employment and thereafter, you shall maintain strict confidentiality regarding all proprietary information, trade secrets, client data, source code, and business strategies. All work products, innovations, and intellectual property created during your employment shall remain the exclusive property of the company."))
     
-    E.append(sec("9", "Code of Conduct", 
+    E.append(sec("10", "Code of Conduct", 
         "You are expected to conduct yourself professionally and ethically at all times. You shall comply with all company policies, rules, and regulations as may be communicated from time to time. Any violation may result in disciplinary action."))
     
-    # Section 10 - Mandatory Documents Checklist
-        # Section 10 - Mandatory Documents Checklist (Streamlined)
+    # Section 11 - Mandatory Documents Checklist (Updated Numbering)
     docs_list = [
         "<b>Signed Offer Letter:</b> 1 copy signed on all pages.",
         "<b>Academic Records:</b> SSC, HSC, and Degree/Diploma certificates (Photocopy + Original for verification).",
@@ -168,12 +171,11 @@ def build_pdf(data):
     doc_items = [Paragraph(f"&#x2022;  {d}", bul) for d in docs_list]
     
     E.append(KeepTogether([
-        Paragraph("<b>10. MANDATORY DOCUMENTS – JOINING DAY CHECKLIST</b>", bold),
+        Paragraph("<b>11. MANDATORY DOCUMENTS – JOINING DAY CHECKLIST</b>", bold),
         Spacer(1, 4),
         *doc_items,
         Spacer(1, 6)
     ]))
-
 
     # Closing
     E.append(Paragraph("We are delighted to welcome you to the APARAITECH SOFTWARE COMPANY family. Please sign and return the duplicate copy of this letter as your acceptance of the terms and conditions mentioned herein.", body))
@@ -197,6 +199,110 @@ def build_pdf(data):
             self.sig_path   = sig_path
             self.stamp_path = stamp_path
             self.width  = 4 * inch
+            self.height = 1.6 * inch   # total height reserved
+
+        def draw(self):
+            c = self.canv
+            # -- Signature image: top-left --
+            if os.path.exists(self.sig_path):
+                c.drawImage(self.sig_path,
+                            0, 0.95*inch,
+                            width=1.5*inch, height=0.6*inch,
+                            preserveAspectRatio=True, mask='auto')
+
+            # -- Digi text: below signature --
+            from reportlab.lib.styles import ParagraphStyle
+            from reportlab.lib.enums import TA_LEFT
+            from reportlab.platypus import Paragraph
+            import datetime as dt
+            now = dt.datetime.now().strftime('%d-%m-%Y %H:%M')
+            style = ParagraphStyle('d', fontName='Courier', fontSize=8,
+                                   textColor=colors.HexColor('#555555'),
+                                   leading=12, alignment=TA_LEFT)
+            lines = [f"Digitally Signed by",
+                     f"Date: {now}",
+                     "<b>Managing Director</b>"]
+            y = 0.6 * inch
+            for line in lines:
+                p = Paragraph(line, style)
+                pw, ph = p.wrap(2.5*inch, 20)
+                p.drawOn(c, 0, y)
+                y -= ph + 1
+
+            # -- Stamp: overlapping digi text block, shifted right & centered --
+            if os.path.exists(self.stamp_path):
+                c.drawImage(self.stamp_path,
+                            0.8*inch, -0.05*inch,
+                            width=1.0*inch, height=1.0*inch,
+                            preserveAspectRatio=True, mask='auto')
+
+    E.append(SignatureBlock(
+        sig_path   = sp if os.path.exists(sp) else "",
+        stamp_path = st if os.path.exists(st) else ""
+    ))
+    
+    # ----- Page Break for Acceptance Page -----
+    E.append(PageBreak())
+    
+    E.append(SP(20))
+    E.append(Paragraph("ACCEPTANCE BY EMPLOYEE", title))
+    E.append(SP(10))
+    E.append(Paragraph("I have read and understood the terms and conditions of employment as stated above. I hereby accept this offer and agree to abide by the company's policies and regulations.", body))
+    E.append(SP(40))
+    
+    sig_accept_tbl = Table([
+        [Paragraph("<b>Signature of Employee</b>", body), Paragraph("<b>Date</b>", rgt)]
+    ], colWidths=[255, 255], hAlign='LEFT')
+    sig_accept_tbl.setStyle(TableStyle([
+        ('LEFTPADDING', (0,0), (0,0), 0),
+        ('RIGHTPADDING', (-1,-1), (-1,-1), 0),
+    ]))
+    E.append(sig_accept_tbl)
+
+    # Document assembly 
+    frame = Frame(40, 60, W - 80, H - 165, id='main')
+    pt = PageTemplate(id='Letter', frames=[frame], onPage=draw_page)
+    doc = BaseDocTemplate(buf, pagesize=A4, pageTemplates=[pt])
+    doc.build(E)
+    buf.seek(0)
+
+    # Encrypt the PDF
+    try:
+        import pikepdf
+        src = io.BytesIO(buf.read())
+        dst = io.BytesIO()
+        with pikepdf.open(src) as pdf:
+            pdf.save(dst, encryption=pikepdf.Encryption(
+                owner="aparaitech2026", user="",
+                allow=pikepdf.Permissions(
+                    print_highres=True, print_lowres=True,
+                    extract=False, modify_annotation=False,
+                    modify_assembly=False, modify_form=False,
+                    modify_other=False, accessibility=True)))
+        dst.seek(0)
+        return dst
+    except Exception as e:
+        buf.seek(0)
+        return buf
+
+# Flask Routes
+@app.route("/")
+def home(): 
+    return render_template("index.html")
+
+@app.route("/generate", methods=["POST"])
+def generate():
+    keys = ["employee_name", "email", "college", "department", "position", "joining_date", "stipend"]
+    data = {k: request.form.get(k, '') for k in keys}
+    
+    buf = build_pdf(data)
+    fname = f"{data['employee_name'].replace(' ','_')}_Aparaitech_Offer.pdf"
+    
+    return send_file(buf, as_attachment=True, download_name=fname, mimetype="application/pdf")
+
+if __name__ == "__main__":
+    app.run(debug=True)
+elf.width  = 4 * inch
             self.height = 1.6 * inch   # total height reserved
 
         def draw(self):
