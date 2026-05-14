@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request, send_file, jsonify
 from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Image, Table,
     TableStyle, BaseDocTemplate, Frame, PageTemplate, KeepTogether, PageBreak)
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -8,10 +8,23 @@ from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_RIGHT, TA_LEFT
 from datetime import datetime
 import os, io, random, string
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 
 app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 W, H = A4
+
+# ── SMTP Config ──────────────────────────────────────────────
+SMTP_HOST     = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT     = int(os.environ.get("SMTP_PORT", 587))
+SMTP_USER     = os.environ.get("SMTP_USER", "your@gmail.com")
+SMTP_PASS     = os.environ.get("SMTP_PASS", "your_app_password")
+SMTP_FROM     = os.environ.get("SMTP_FROM", SMTP_USER)
+# ─────────────────────────────────────────────────────────────
 
 # Aparaitech Brand Colors
 DARK = colors.HexColor('#0d2b5e')
@@ -295,6 +308,40 @@ def build_pdf(data):
         return buf
 
 # Flask Routes
+def send_offer_email(to_email, emp_name, pdf_buf, fname):
+    msg = MIMEMultipart()
+    msg['From']    = SMTP_FROM
+    msg['To']      = to_email
+    msg['Subject'] = f"Offer Letter – Aparaitech Software Company"
+
+    body = f"""Dear {emp_name},
+
+Congratulations! Please find your offer letter from Aparaitech Software Company attached to this email.
+
+Kindly sign and return a copy as your acceptance of the terms mentioned.
+
+We look forward to welcoming you to the team!
+
+Warm regards,
+HR Department
+Aparaitech Software Company
+Baramati, Pune – 412306
+hr@aparaitech.com | www.aparaitech.com
+"""
+    msg.attach(MIMEText(body, 'plain'))
+
+    part = MIMEBase('application', 'octet-stream')
+    part.set_payload(pdf_buf.read())
+    encoders.encode_base64(part)
+    part.add_header('Content-Disposition', f'attachment; filename="{fname}"')
+    msg.attach(part)
+
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+        server.ehlo()
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASS)
+        server.sendmail(SMTP_FROM, to_email, msg.as_string())
+
 @app.route("/")
 def home(): 
     return render_template("index.html")
@@ -306,9 +353,25 @@ def generate():
     
     buf = build_pdf(data)
     fname = f"{data['employee_name'].replace(' ','_')}_Aparaitech_Offer.pdf"
-    
-    return send_file(buf, as_attachment=True, download_name=fname, mimetype="application/pdf")
+
+    # Send email
+    email_status = "sent"
+    email_error  = ""
+    if data.get('email'):
+        try:
+            buf.seek(0)
+            send_offer_email(data['email'], data['employee_name'], buf, fname)
+        except Exception as e:
+            email_status = "failed"
+            email_error  = str(e)
+
+    # Also return PDF for download
+    buf.seek(0)
+    response = send_file(buf, as_attachment=True, download_name=fname, mimetype="application/pdf")
+    response.headers['X-Email-Status'] = email_status
+    response.headers['X-Email-Error']  = email_error
+    return response
 
 if __name__ == "__main__":
     app.run(debug=True)
-    
+

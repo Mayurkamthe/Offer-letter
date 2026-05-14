@@ -71,14 +71,48 @@
       </div>
       <div class="row">
         <div class="field">
-          <label>Stipend (Rs/month)</label>
+          <label>Stipend (per month)</label>
           <input type="text" name="stipend" placeholder="e.g. 5000" required>
         </div>
       </div>
-      <button class="btn" type="submit">Generate &amp; Download PDF</button>
+      <button class="btn" type="submit" id="btn">Generate, Download &amp; Send PDF</button>
     </form>
-    <p class="note">PDF includes Training Policy, Rules, Annexure &amp; Salary Structure</p>
+    <div id="msg" style="display:none;margin-top:16px;padding:12px 16px;border-radius:8px;font-size:13px;text-align:center"></div>
+    <p class="note">PDF is generated, downloaded &amp; emailed to the candidate automatically</p>
   </div>
 </div>
-</body>
-</html>
+<script>
+  document.querySelector('form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn');
+    const msg = document.getElementById('msg');
+    btn.textContent = 'Generating...'; btn.disabled = true;
+    try {
+      const res = await fetch('/generate', {method:'POST', body: new FormData(this)});
+      const status = res.headers.get('X-Email-Status');
+      const err    = res.headers.get('X-Email-Error');
+      // Trigger download
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = 'Offer_Letter.pdf'; a.click();
+      // Show status
+      if (status === 'sent') {
+        msg.style.background = '#e6f9f0'; msg.style.color = '#1a7a4a';
+        msg.style.border = '1px solid #a3e4c1';
+        msg.textContent = '✅ PDF downloaded & emailed to candidate successfully!';
+      } else {
+        msg.style.background = '#fff4e5'; msg.style.color = '#b35a00';
+        msg.style.border = '1px solid #ffd699';
+        msg.textContent = `⚠️ PDF downloaded, but email failed: ${err}`;
+      }
+      msg.style.display = 'block';
+    } catch(ex) {
+      msg.style.background='#fdecea'; msg.style.color='#c0392b';
+      msg.style.border='1px solid #f5b7b1';
+      msg.textContent = '❌ Error: ' + ex.message;
+      msg.style.display = 'block';
+    }
+    btn.textContent = 'Generate, Download & Send PDF'; btn.disabled = false;
+  });
+</script>
