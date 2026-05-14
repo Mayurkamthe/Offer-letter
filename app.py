@@ -79,10 +79,25 @@ def build_pdf(data):
     ref_year = datetime.now().strftime('%Y')
     ref = f"APC/HRD/{ref_year}/OFF-" + ''.join(random.choices(string.digits, k=3))
     
-    # Format joining date
+    # Format joining / training dates
     joining = data.get('joining_date', '')
+    joining_raw = joining
     try: joining = datetime.strptime(joining, '%Y-%m-%d').strftime('%d %B %Y')
     except: pass
+
+    end_raw = data.get('training_end_date', '')
+    end_date = end_raw
+    try: end_date = datetime.strptime(end_raw, '%Y-%m-%d').strftime('%d %B %Y')
+    except: pass
+
+    # Training duration in months
+    try:
+        d1 = datetime.strptime(joining_raw, '%Y-%m-%d')
+        d2 = datetime.strptime(end_raw, '%Y-%m-%d')
+        months = (d2.year - d1.year) * 12 + (d2.month - d1.month)
+        duration_str = f"{months:02d} Months (Fixed Term)"
+    except:
+        duration_str = "04 Months (Fixed Term)" 
 
     E = []
     
@@ -128,8 +143,11 @@ def build_pdf(data):
     E.append(sec("1", "Position &amp; Appointment", 
         f"You are hereby appointed as <b>{position}</b> and shall report to the designated reporting manager at our Baramati office. Your services may be transferred to any department, project, or location as per business requirements."))
     
-    E.append(sec("2", "Date of Commencement", 
-        f"Your employment shall commence from <b>{joining}</b>. You are required to report at our office on the joining date along with all original documents for verification."))
+    E.append(sec("2", "INTERNSHIP / TRAINING PERIOD",
+        f"&#x2022; &nbsp;<b>Training Duration:</b> {duration_str}<br/>"
+        f"&#x2022; &nbsp;<b>Training Start Date:</b> {joining}<br/>"
+        f"&#x2022; &nbsp;<b>Training End Date:</b> {end_date}<br/><br/>"
+        f"You are required to report at our Baramati office on the training start date along with all original documents for verification."))
     
     E.append(sec("3", "Probation Period", 
         "You will be on probation/internship for a period of six (6) months from the date of joining. During this period, your performance will be evaluated, and upon successful completion, you will be confirmed as a regular employee. The company reserves the right to extend the probation period if deemed necessary."))
@@ -292,7 +310,7 @@ def home():
 
 @app.route("/generate", methods=["POST"])
 def generate():
-    keys = ["employee_name", "email", "college", "department", "position", "joining_date", "stipend"]
+    keys = ["employee_name", "email", "college", "department", "position", "joining_date", "training_end_date", "stipend"]
     data = {k: request.form.get(k, '') for k in keys}
     
     buf = build_pdf(data)
