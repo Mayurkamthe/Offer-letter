@@ -61,20 +61,20 @@ def draw_page(c, doc):
 def build_pdf(data):
     buf = io.BytesIO()
 
-    body  = ParagraphStyle('body', fontSize=10, fontName='Helvetica', leading=15, textColor=colors.black, alignment=TA_JUSTIFY, spaceAfter=6)
-    bold  = ParagraphStyle('bold', fontSize=10, fontName='Helvetica-Bold', leading=15, textColor=DARK, spaceAfter=4)
-    title = ParagraphStyle('title', fontSize=13, fontName='Helvetica-Bold', textColor=DARK, alignment=TA_CENTER, spaceAfter=12)
-    rgt   = ParagraphStyle('rgt', fontSize=10, fontName='Helvetica', textColor=colors.black, alignment=TA_RIGHT)
+    body  = ParagraphStyle('body', fontSize=9.5, fontName='Helvetica', leading=13, textColor=colors.black, alignment=TA_JUSTIFY, spaceAfter=4)
+    bold  = ParagraphStyle('bold', fontSize=9.5, fontName='Helvetica-Bold', leading=13, textColor=DARK, spaceAfter=2)
+    title = ParagraphStyle('title', fontSize=13, fontName='Helvetica-Bold', textColor=DARK, alignment=TA_CENTER, spaceAfter=8)
+    rgt   = ParagraphStyle('rgt', fontSize=9.5, fontName='Helvetica', textColor=colors.black, alignment=TA_RIGHT)
     digi  = ParagraphStyle('digi', fontSize=8, fontName='Courier', textColor=GREY, alignment=TA_LEFT)
 
     def sec(n, head, text):
-        return KeepTogether([
+        return [
             Paragraph(f"<b>{n}. {head}</b>", bold),
             Paragraph(text, body),
-            Spacer(1, 6)
-        ])
+            Spacer(1, 4)
+        ]
 
-    SP = lambda n=6: Spacer(1, n)
+    SP = lambda n=4: Spacer(1, n)
     date_str = datetime.now().strftime('%d %B %Y')
     ref_year = datetime.now().strftime('%Y')
     ref = f"APC/HRD/{ref_year}/OFF-" + ''.join(random.choices(string.digits, k=3))
@@ -111,11 +111,11 @@ def build_pdf(data):
         ('RIGHTPADDING', (-1,-1), (-1,-1), 0),
     ]))
     E.append(top_tbl)
-    E.append(SP(12))
+    E.append(SP(8))
     
     # Title
     E.append(Paragraph("OFFER OF EMPLOYMENT &amp; APPOINTMENT LETTER", title))
-    E.append(SP(6))
+    E.append(SP(4))
     
     # Addressee Data
     emp_name = data.get('employee_name', 'Employee')
@@ -126,56 +126,55 @@ def build_pdf(data):
     E.append(Paragraph("Maharashtra, India", body))
     if data.get("email"):
         E.append(Paragraph(f"<b>Email:</b> {data.get('email')}", body))
-    E.append(SP(8))
+    E.append(SP(6))
     
     # Subject
     position = data.get('position', 'Developer')
     E.append(Paragraph(f"<b>Subject: Offer of Employment for the position of {position}</b>", body))
-    E.append(SP(8))
+    E.append(SP(6))
     
     # Salutation & Intro
     E.append(Paragraph(f"Dear {emp_name},", body))
     E.append(Paragraph(f"We are pleased to confirm your selection for the position of <b>{position}</b> at <b>APARAITECH SOFTWARE COMPANY</b>.", body))
     E.append(Paragraph("This letter outlines the terms and conditions of your employment with us. We are confident that your skills and experience will be a valuable addition to our team.", body))
-    E.append(SP(8))
+    E.append(SP(6))
     
     # Terms and Conditions Sections
-    E.append(sec("1", "Position &amp; Appointment", 
+    E.extend(sec("1", "Position &amp; Appointment", 
         f"You are hereby appointed as <b>{position}</b> and shall report to the designated reporting manager at our Baramati office. Your services may be transferred to any department, project, or location as per business requirements."))
     
-    E.append(sec("2", "INTERNSHIP / TRAINING PERIOD",
+    E.extend(sec("2", "INTERNSHIP / TRAINING PERIOD",
         f"&#x2022; &nbsp;<b>Training Duration:</b> {duration_str}<br/>"
         f"&#x2022; &nbsp;<b>Training Start Date:</b> {joining}<br/>"
-        f"&#x2022; &nbsp;<b>Training End Date:</b> {end_date}<br/><br/>"
+        f"&#x2022; &nbsp;<b>Training End Date:</b> {end_date}<br/>"
         f"You are required to report at our Baramati office on the training start date along with all original documents for verification."))
     
-    E.append(sec("3", "Probation Period", 
+    E.extend(sec("3", "Probation Period", 
         "You will be on probation/internship for a period of six (6) months from the date of joining. During this period, your performance will be evaluated, and upon successful completion, you will be confirmed as a regular employee. The company reserves the right to extend the probation period if deemed necessary."))
     
     stipend = data.get('stipend', '0')
-    E.append(sec("4", "Compensation &amp; Benefits", 
+    E.extend(sec("4", "Compensation &amp; Benefits", 
         f"Your monthly gross salary/stipend shall be <b>{stipend} (Indian Rupees)</b>. The detailed compensation structure, including all allowances and deductions, will be provided separately in the compensation annexure. Salary will be credited to your designated bank account by the last working day of each month."))
     
-    # New Section 5 added here
-    E.append(sec("5", "Pre-Placement Offer (PPO) &amp; Full-Time Employment", 
-        "After successful completion of the 4-month training period, candidates may be considered for a PPO based on performance, project requirements, academic completion, and position availability. The offered package, if applicable, may range between ₹2.5 LPA to ₹4.5 LPA depending on the final evaluation. APARAITECH reserves the right to extend or decline the PPO at its sole discretion. Completion of the internship does not guarantee full-time employment."))
+    E.extend(sec("5", "Pre-Placement Offer (PPO) &amp; Full-Time Employment", 
+        "After successful completion of the training period, candidates may be considered for a PPO based on performance, project requirements, academic completion, and position availability. The offered package, if applicable, may range between 2.5 LPA to 4.5 LPA depending on the final evaluation. APARAITECH reserves the right to extend or decline the PPO at its sole discretion. Completion of the internship does not guarantee full-time employment."))
     
-    E.append(sec("6", "Working Hours &amp; Attendance", 
+    E.extend(sec("6", "Working Hours &amp; Attendance", 
         "The company follows a 6-day work week (9 hours/day), Monday through Saturday, 10:00 AM to 7:30 PM. You may be required to work additional hours during critical project phases. Regular and punctual attendance is essential."))
     
-    E.append(sec("7", "Leave Entitlement", 
+    E.extend(sec("7", "Leave Entitlement", 
         "You shall be entitled to 15 days of Paid Leave and 7 days of Casual Leave per calendar year, in accordance with company policy. Leave availed shall be subject to prior approval from your reporting manager."))
     
-    E.append(sec("8", "Notice Period &amp; Termination", 
+    E.extend(sec("8", "Notice Period &amp; Termination", 
         "During the probation period, either party may terminate the employment by providing fifteen (15) days' written notice. Post confirmation, the notice period shall be thirty (30) days from either side. The company may terminate your services without notice in cases of misconduct, breach of trust, or violation of company policies."))
     
-    E.append(sec("9", "Confidentiality &amp; Intellectual Property", 
+    E.extend(sec("9", "Confidentiality &amp; Intellectual Property", 
         "During the course of your employment and thereafter, you shall maintain strict confidentiality regarding all proprietary information, trade secrets, client data, source code, and business strategies. All work products, innovations, and intellectual property created during your employment shall remain the exclusive property of the company."))
     
-    E.append(sec("10", "Code of Conduct", 
+    E.extend(sec("10", "Code of Conduct", 
         "You are expected to conduct yourself professionally and ethically at all times. You shall comply with all company policies, rules, and regulations as may be communicated from time to time. Any violation may result in disciplinary action."))
     
-    # Section 11 - Mandatory Documents Checklist (Updated Numbering)
+    # Section 11 - Mandatory Documents Checklist
     docs_list = [
         "<b>Signed Offer Letter:</b> 1 copy signed on all pages.",
         "<b>Academic Records:</b> SSC, HSC, and Degree/Diploma certificates (Photocopy + Original for verification).",
@@ -185,15 +184,12 @@ def build_pdf(data):
         "<b>Institutional Docs:</b> Bonafide Certificate / NOC (if applicable)."
     ]
     
-    bul = ParagraphStyle('bul', fontSize=9.5, fontName='Helvetica', leading=14, leftIndent=14, textColor=colors.black, spaceAfter=4)
-    doc_items = [Paragraph(f"&#x2022;  {d}", bul) for d in docs_list]
-    
-    E.append(KeepTogether([
-        Paragraph("<b>11. MANDATORY DOCUMENTS – JOINING DAY CHECKLIST</b>", bold),
-        Spacer(1, 4),
-        *doc_items,
-        Spacer(1, 6)
-    ]))
+    bul = ParagraphStyle('bul', fontSize=9, fontName='Helvetica', leading=13, leftIndent=14, textColor=colors.black, spaceAfter=2)
+    E.append(Paragraph("<b>11. MANDATORY DOCUMENTS – JOINING DAY CHECKLIST</b>", bold))
+    E.append(Spacer(1, 2))
+    for d in docs_list:
+        E.append(Paragraph(f"&#x2022;  {d}", bul))
+    E.append(Spacer(1, 4))
 
     # Closing
     E.append(Paragraph("We are delighted to welcome you to the APARAITECH SOFTWARE COMPANY family. Please sign and return the duplicate copy of this letter as your acceptance of the terms and conditions mentioned herein.", body))
@@ -202,7 +198,7 @@ def build_pdf(data):
     # ----- Page Break to force signature onto Page 2 -----
     E.append(PageBreak())
 
-    E.append(SP(16))
+    E.append(SP(12))
 
     # -------------------------------------------------------------
     # Company Signatures Section - Page 2 (stamp always here)
