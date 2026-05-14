@@ -187,20 +187,28 @@ def build_pdf(data):
     E.append(SP(6))
     
     sp, st = gp("signature.png"), gp("stamp.png")
-    c1 = Image(sp, width=1.4*inch, height=0.5*inch) if os.path.exists(sp) else Paragraph("<br/><i>(Signature)</i><br/>", body)
-    c2 = Image(st, width=1.1*inch, height=1.1*inch) if os.path.exists(st) else Paragraph("<br/><i>(Stamp)</i><br/>", body)
-    
-    # Digital signature text
-    digi_text = Paragraph(f"Digitally Signed by<br/>Date: {datetime.now().strftime('%d-%m-%Y %H:%M')}<br/><b>Managing Director</b>", digi)
-    
-    # Group the physical signature image and the digital signature text together in a list
-    left_col = [c1, Spacer(1, 4), digi_text]
-    
-    # Place the grouped signature/text in column 1, and the stamp next to it in column 2
-    sig_tbl = Table([[left_col, c2]], colWidths=[2.2*inch, 1.5*inch], hAlign='LEFT')
+    sig_img  = Image(sp, width=1.5*inch, height=0.6*inch) if os.path.exists(sp) else Paragraph("<i>(Signature)</i>", digi)
+    stmp_img = Image(st, width=1.05*inch, height=1.05*inch) if os.path.exists(st) else Paragraph("<i>(Stamp)</i>", digi)
+    digi_text = Paragraph(
+        f"Digitally Signed by<br/>"
+        f"Date: {datetime.now().strftime('%d-%m-%Y %H:%M')}<br/>"
+        f"<b>Managing Director</b>", digi)
+    # 2-col table: left=signature+digi text, right=stamp spanning both rows
+    sig_tbl = Table(
+        [[sig_img, stmp_img],
+         [digi_text, ""]],
+        colWidths=[2.4*inch, 1.2*inch],
+        hAlign='LEFT'
+    )
     sig_tbl.setStyle(TableStyle([
-        ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
-        ('LEFTPADDING',(0,0),(0,-1), 0), # Align completely to the left
+        ('VALIGN',        (0,0), (-1,-1), 'MIDDLE'),
+        ('LEFTPADDING',   (0,0), (-1,-1), 0),
+        ('RIGHTPADDING',  (0,0), (-1,-1), 4),
+        ('TOPPADDING',    (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+        ('SPAN',          (1,0), (1,1)),
+        ('VALIGN',        (1,0), (1,1), 'MIDDLE'),
+        ('ALIGN',         (1,0), (1,1), 'CENTER'),
     ]))
     E.append(sig_tbl)
     
