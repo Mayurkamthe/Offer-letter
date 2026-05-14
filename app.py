@@ -87,7 +87,6 @@ def build_pdf(data):
     E = []
     
     # Top Reference & Date
-    # Added hAlign='LEFT' and removed padding so it aligns nicely with page margins
     top_tbl = Table([
         [Paragraph(f"<b>Ref:</b> {ref}", body),
          Paragraph(f"<b>Date:</b> {date_str}", rgt)]
@@ -157,25 +156,29 @@ def build_pdf(data):
     E.append(Paragraph("We look forward to a long and mutually rewarding association.", body))
     E.append(SP(16))
     
-    # Company Signatures Section
+    # -------------------------------------------------------------
+    # Company Signatures Section - FIXED for Stamp/Digital Sign
+    # -------------------------------------------------------------
     E.append(Paragraph("<b>For APARAITECH SOFTWARE COMPANY</b>", bold))
     E.append(SP(6))
     
     sp, st = gp("signature.png"), gp("stamp.png")
-    # Added <br/> elements for spacing if image doesn't exist
-    c1 = Image(sp, width=1.4*inch, height=0.5*inch) if os.path.exists(sp) else Paragraph("<br/><br/><i>(Signature)</i>", body)
-    c2 = Image(st, width=1.1*inch, height=1.1*inch) if os.path.exists(st) else Paragraph("<br/><br/><i>(Stamp)</i>", body)
+    c1 = Image(sp, width=1.4*inch, height=0.5*inch) if os.path.exists(sp) else Paragraph("<br/><i>(Signature)</i><br/>", body)
+    c2 = Image(st, width=1.1*inch, height=1.1*inch) if os.path.exists(st) else Paragraph("<br/><i>(Stamp)</i><br/>", body)
     
-    # FIXED: Added hAlign='LEFT' and set LEFTPADDING to 0 so it aligns correctly under the text.
-    sig_tbl = Table([[c1, c2]], colWidths=[1.6*inch, 1.4*inch], hAlign='LEFT')
+    # Digital signature text
+    digi_text = Paragraph(f"Digitally Signed by<br/>Date: {datetime.now().strftime('%d-%m-%Y %H:%M')}<br/><b>Managing Director</b>", digi)
+    
+    # Group the physical signature image and the digital signature text together in a list
+    left_col = [c1, Spacer(1, 4), digi_text]
+    
+    # Place the grouped signature/text in column 1, and the stamp next to it in column 2
+    sig_tbl = Table([[left_col, c2]], colWidths=[2.2*inch, 1.5*inch], hAlign='LEFT')
     sig_tbl.setStyle(TableStyle([
         ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
-        ('LEFTPADDING',(0,0),(0,-1), 0), # Aligns the first column completely left
+        ('LEFTPADDING',(0,0),(0,-1), 0), # Align completely to the left
     ]))
     E.append(sig_tbl)
-    
-    E.append(SP(4))
-    E.append(Paragraph(f"Digitally Signed by<br/>Date: {datetime.now().strftime('%d-%m-%Y %H:%M')}<br/><b>Managing Director</b>", digi))
     
     # ----- Page Break for Acceptance Page -----
     E.append(PageBreak())
@@ -186,7 +189,6 @@ def build_pdf(data):
     E.append(Paragraph("I have read and understood the terms and conditions of employment as stated above. I hereby accept this offer and agree to abide by the company's policies and regulations.", body))
     E.append(SP(40))
     
-    # FIXED: Added hAlign='LEFT' to the employee acceptance signature area as well
     sig_accept_tbl = Table([
         [Paragraph("<b>Signature of Employee</b>", body), Paragraph("<b>Date</b>", rgt)]
     ], colWidths=[255, 255], hAlign='LEFT')
