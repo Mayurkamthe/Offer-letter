@@ -194,14 +194,10 @@ def build_pdf(data):
     # Closing
     E.append(Paragraph("We are delighted to welcome you to the APARAITECH SOFTWARE COMPANY family. Please sign and return the duplicate copy of this letter as your acceptance of the terms and conditions mentioned herein.", body))
     E.append(Paragraph("We look forward to a long and mutually rewarding association.", body))
-
-    # ----- Page Break to force signature onto Page 2 -----
-    E.append(PageBreak())
-
     E.append(SP(12))
 
     # -------------------------------------------------------------
-    # Company Signatures Section - Page 2 (stamp always here)
+    # Company Signatures Section - flows naturally after content
     # -------------------------------------------------------------
     E.append(Paragraph("<b>For APARAITECH SOFTWARE COMPANY</b>", bold))
     E.append(SP(6))
