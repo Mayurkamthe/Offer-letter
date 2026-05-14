@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aparaitech – Offer Letter Generator</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:linear-gradient(135deg,#0d2b5e 0%,#1a4a8a 40%,#00aec7 100%);min-height:100vh;font-family:'Segoe UI',Arial,sans-serif;display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);width:100%;max-width:600px;overflow:hidden}
+  .header{background:linear-gradient(135deg,#0d2b5e,#00aec7);padding:28px 32px;text-align:center}
+  .header img{height:60px;margin-bottom:10px}
+  .header h1{color:#fff;font-size:22px;font-weight:700;letter-spacing:.5px}
+  .header p{color:rgba(255,255,255,.8);font-size:13px;margin-top:4px}
+  .form-body{padding:32px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .field{margin-bottom:18px}
+  label{display:block;font-size:12px;font-weight:600;color:#0d2b5e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  input{width:100%;padding:11px 14px;border:1.5px solid #dde3f0;border-radius:8px;font-size:14px;color:#222;outline:none;transition:.2s}
+  input:focus{border-color:#00aec7;box-shadow:0 0 0 3px rgba(0,174,199,.12)}
+  .btn{width:100%;padding:14px;background:linear-gradient(135deg,#0d2b5e,#00aec7);color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:.5px;margin-top:8px;transition:.2s}
+  .btn:hover{opacity:.9;transform:translateY(-1px)}
+  .note{text-align:center;font-size:12px;color:#888;margin-top:14px}
+  @media(max-width:520px){.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <img src="/static/logo.png" alt="Aparaitech Logo" onerror="this.style.display='none'">
+    <h1>Offer Letter Generator</h1>
+    <p>Aparaitech Software Company, Baramati</p>
+  </div>
+  <div class="form-body">
+    <form action="/generate" method="POST">
+      <div class="row">
+        <div class="field">
+          <label>Employee Name</label>
+          <input type="text" name="employee_name" placeholder="Full Name" required>
+        </div>
+        <div class="field">
+          <label>College Name</label>
+          <input type="text" name="college" placeholder="College / University" required>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Department</label>
+          <input type="text" name="department" placeholder="e.g. Computer Science" required>
+        </div>
+        <div class="field">
+          <label>Position / Role</label>
+          <input type="text" name="position" placeholder="e.g. Software Intern" required>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Date of Joining</label>
+          <input type="date" name="joining_date" required>
+        </div>
+        <div class="field">
+          <label>Stipend (Rs/month)</label>
+          <input type="text" name="stipend" placeholder="e.g. 5000" required>
+        </div>
+      </div>
+      <button class="btn" type="submit">Generate &amp; Download PDF</button>
+    </form>
+    <p class="note">PDF includes Training Policy, Rules, Annexure &amp; Salary Structure</p>
+  </div>
+</div>
+</body>
+</html>
