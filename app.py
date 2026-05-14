@@ -198,37 +198,39 @@ def build_pdf(data):
     # Closing
     E.append(Paragraph("We are delighted to welcome you to the APARAITECH SOFTWARE COMPANY family. Please sign and return the duplicate copy of this letter as your acceptance of the terms and conditions mentioned herein.", body))
     E.append(Paragraph("We look forward to a long and mutually rewarding association.", body))
+
+    # ----- Page Break to force signature onto Page 2 -----
+    E.append(PageBreak())
+
     E.append(SP(16))
-    
+
     # -------------------------------------------------------------
-    # Company Signatures Section - FIXED for Stamp/Digital Sign
+    # Company Signatures Section - Page 2 (stamp always here)
     # -------------------------------------------------------------
     E.append(Paragraph("<b>For APARAITECH SOFTWARE COMPANY</b>", bold))
     E.append(SP(6))
-    
+
     sp, st = gp("signature.png"), gp("stamp.png")
 
     from reportlab.platypus import Flowable
 
     class SignatureBlock(Flowable):
-        """Draws signature, then stamp overlapping the digi-signed text below it."""
+        """Draws signature + digi text + stamp — always on same page."""
         def __init__(self, sig_path, stamp_path):
             Flowable.__init__(self)
             self.sig_path   = sig_path
             self.stamp_path = stamp_path
             self.width  = 4 * inch
-            self.height = 1.6 * inch   # total height reserved
+            self.height = 1.6 * inch
 
         def draw(self):
             c = self.canv
-            # -- Signature image: top-left --
             if os.path.exists(self.sig_path):
                 c.drawImage(self.sig_path,
                             0, 0.95*inch,
                             width=1.5*inch, height=0.6*inch,
                             preserveAspectRatio=True, mask='auto')
 
-            # -- Digi text: below signature --
             from reportlab.lib.styles import ParagraphStyle
             from reportlab.lib.enums import TA_LEFT
             from reportlab.platypus import Paragraph
@@ -237,9 +239,7 @@ def build_pdf(data):
             style = ParagraphStyle('d', fontName='Courier', fontSize=8,
                                    textColor=colors.HexColor('#555555'),
                                    leading=12, alignment=TA_LEFT)
-            lines = [f"Digitally Signed by",
-                     f"Date: {now}",
-                     "<b>Managing Director</b>"]
+            lines = ["Digitally Signed by", f"Date: {now}", "<b>Managing Director</b>"]
             y = 0.6 * inch
             for line in lines:
                 p = Paragraph(line, style)
@@ -247,7 +247,6 @@ def build_pdf(data):
                 p.drawOn(c, 0, y)
                 y -= ph + 1
 
-            # -- Stamp: overlapping digi text block, shifted right & centered --
             if os.path.exists(self.stamp_path):
                 c.drawImage(self.stamp_path,
                             0.8*inch, -0.05*inch,
@@ -258,8 +257,8 @@ def build_pdf(data):
         sig_path   = sp if os.path.exists(sp) else "",
         stamp_path = st if os.path.exists(st) else ""
     ))
-    
-    # ----- Page Break for Acceptance Page -----
+
+    # ----- Page Break for Acceptance Page (Page 3) -----
     E.append(PageBreak())
     
     E.append(SP(20))
