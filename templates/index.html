@@ -3,24 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aparaitech – Offer Letter Generator</title>
+<title>Aparaitech – HR Document Generator</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:linear-gradient(135deg,#0d2b5e 0%,#1a4a8a 40%,#00aec7 100%);min-height:100vh;font-family:'Segoe UI',Arial,sans-serif;display:flex;align-items:center;justify-content:center;padding:20px}
-  .card{background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);width:100%;max-width:600px;overflow:hidden}
-  .header{background:linear-gradient(135deg,#0d2b5e,#00aec7);padding:28px 32px;text-align:center}
-  .header img{height:60px;margin-bottom:10px}
-  .header h1{color:#fff;font-size:22px;font-weight:700;letter-spacing:.5px}
-  .header p{color:rgba(255,255,255,.8);font-size:13px;margin-top:4px}
-  .form-body{padding:32px}
+  .card{background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.3);width:100%;max-width:640px;overflow:hidden}
+  .header{background:linear-gradient(135deg,#0d2b5e,#00aec7);padding:24px 32px 0;text-align:center}
+  .header img{height:56px;margin-bottom:8px}
+  .header h1{color:#fff;font-size:21px;font-weight:700;letter-spacing:.5px}
+  .header p{color:rgba(255,255,255,.8);font-size:13px;margin-top:4px;padding-bottom:16px}
+  .logout-link{display:inline-block;margin-top:8px;font-size:11px;color:rgba(255,255,255,.7);text-decoration:none;border:1px solid rgba(255,255,255,.3);padding:4px 12px;border-radius:20px;margin-bottom:0}
+  /* Tabs */
+  .tabs{display:flex;background:rgba(0,0,0,.18)}
+  .tab-btn{flex:1;padding:12px 0;border:none;background:transparent;color:rgba(255,255,255,.65);font-size:13px;font-weight:600;cursor:pointer;letter-spacing:.4px;transition:.2s;border-bottom:3px solid transparent}
+  .tab-btn.active{color:#fff;border-bottom:3px solid #00aec7;background:rgba(255,255,255,.08)}
+  .tab-btn:hover:not(.active){color:#fff;background:rgba(255,255,255,.05)}
+  /* Body */
+  .form-body{padding:28px 32px}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-  .field{margin-bottom:18px}
-  label{display:block;font-size:12px;font-weight:600;color:#0d2b5e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
-  input{width:100%;padding:11px 14px;border:1.5px solid #dde3f0;border-radius:8px;font-size:14px;color:#222;outline:none;transition:.2s}
-  input:focus{border-color:#00aec7;box-shadow:0 0 0 3px rgba(0,174,199,.12)}
-  .btn{width:100%;padding:14px;background:linear-gradient(135deg,#0d2b5e,#00aec7);color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:.5px;margin-top:8px;transition:.2s}
+  .field{margin-bottom:16px}
+  label{display:block;font-size:11.5px;font-weight:600;color:#0d2b5e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  input,select{width:100%;padding:10px 13px;border:1.5px solid #dde3f0;border-radius:8px;font-size:14px;color:#222;outline:none;transition:.2s;background:#fff}
+  input:focus,select:focus{border-color:#00aec7;box-shadow:0 0 0 3px rgba(0,174,199,.12)}
+  .btn{width:100%;padding:13px;background:linear-gradient(135deg,#0d2b5e,#00aec7);color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.5px;margin-top:6px;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px}
   .btn:hover{opacity:.9;transform:translateY(-1px)}
-  .note{text-align:center;font-size:12px;color:#888;margin-top:14px}
+  .btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+  .note{text-align:center;font-size:12px;color:#888;margin-top:12px}
+  .msg{display:none;margin-top:14px;padding:11px 15px;border-radius:8px;font-size:13px;text-align:center}
+  .section-title{font-size:13px;font-weight:700;color:#0d2b5e;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #e8eef8;display:flex;align-items:center;gap:6px}
+  .badge{background:linear-gradient(135deg,#0d2b5e,#00aec7);color:#fff;font-size:10px;padding:2px 8px;border-radius:12px;font-weight:600}
+  .id-preview{background:linear-gradient(135deg,#f0f6ff,#e8f8fc);border:1px solid #c8e6f0;border-radius:10px;padding:14px;margin-bottom:16px;font-size:12px;color:#0d2b5e}
+  .id-preview strong{display:block;margin-bottom:6px;font-size:13px}
   @media(max-width:520px){.row{grid-template-columns:1fr}}
 </style>
 </head>
@@ -28,12 +41,21 @@
 <div class="card">
   <div class="header">
     <img src="/static/logo.png" alt="Aparaitech Logo" onerror="this.style.display='none'">
-    <h1>Offer Letter Generator</h1>
+    <h1>HR Document Generator</h1>
     <p>Aparaitech Software Company, Baramati</p>
-    <a href="/logout" style="display:inline-block;margin-top:10px;font-size:11px;color:rgba(255,255,255,.7);text-decoration:none;border:1px solid rgba(255,255,255,.3);padding:4px 12px;border-radius:20px;">⎋ Logout</a>
+    <a href="/logout" class="logout-link">⎋ Logout</a>
   </div>
-  <div class="form-body">
-    <form action="/generate" method="POST">
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('offer',this)">📄 Offer Letter</button>
+    <button class="tab-btn" onclick="switchTab('idcard',this)">🪪 ID Card</button>
+  </div>
+
+  <!-- ═══════════════════ OFFER LETTER TAB ═══════════════════ -->
+  <div id="tab-offer" class="form-body">
+    <form id="offerForm">
+      <div class="section-title">🧑‍💼 Candidate Details <span class="badge">Offer Letter</span></div>
       <div class="row">
         <div class="field">
           <label>Employee Name</label>
@@ -49,15 +71,19 @@
           <label>College Name</label>
           <input type="text" name="college" placeholder="College / University" required>
         </div>
-      </div>
-      <div class="row">
         <div class="field">
           <label>Department</label>
           <input type="text" name="department" placeholder="e.g. Computer Science" required>
         </div>
+      </div>
+      <div class="row">
         <div class="field">
           <label>Position / Role</label>
           <input type="text" name="position" placeholder="e.g. Software Intern" required>
+        </div>
+        <div class="field">
+          <label>Stipend (per month ₹)</label>
+          <input type="text" name="stipend" placeholder="e.g. 5000" required>
         </div>
       </div>
       <div class="row">
@@ -70,51 +96,146 @@
           <input type="date" name="training_end_date" required>
         </div>
       </div>
-      <div class="row">
-        <div class="field">
-          <label>Stipend (per month)</label>
-          <input type="text" name="stipend" placeholder="e.g. 5000" required>
-        </div>
-      </div>
-      <button class="btn" type="submit" id="btn">Generate, Download &amp; Send PDF</button>
+      <button class="btn" type="submit" id="offerBtn">
+        <span id="offerBtnIcon">📄</span> Generate, Download &amp; Send PDF
+      </button>
     </form>
-    <div id="msg" style="display:none;margin-top:16px;padding:12px 16px;border-radius:8px;font-size:13px;text-align:center"></div>
+    <div id="offerMsg" class="msg"></div>
     <p class="note">PDF is generated, downloaded &amp; emailed to the candidate automatically</p>
   </div>
+
+  <!-- ═══════════════════ ID CARD TAB ═══════════════════ -->
+  <div id="tab-idcard" class="form-body" style="display:none">
+    <div class="id-preview">
+      <strong>🪪 Employee ID Card Generator</strong>
+      Generates a professional CR80-standard ID card (front &amp; back) as a downloadable PDF.
+      Includes employee photo placeholder, barcode strip, blood group badge, and company branding.
+    </div>
+    <form id="idForm">
+      <div class="section-title">👤 Employee Information <span class="badge">ID Card</span></div>
+      <div class="row">
+        <div class="field">
+          <label>Employee Name</label>
+          <input type="text" name="employee_name" placeholder="Full Name" required>
+        </div>
+        <div class="field">
+          <label>Employee ID</label>
+          <input type="text" name="emp_id" placeholder="e.g. APC-2025-001" required>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Position / Designation</label>
+          <input type="text" name="position" placeholder="e.g. Software Engineer" required>
+        </div>
+        <div class="field">
+          <label>Department</label>
+          <input type="text" name="department" placeholder="e.g. Engineering" required>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Email Address</label>
+          <input type="email" name="email" placeholder="emp@aparaitech.org">
+        </div>
+        <div class="field">
+          <label>Phone Number</label>
+          <input type="tel" name="phone" placeholder="+91 98765 43210">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Blood Group</label>
+          <select name="blood_group" required>
+            <option value="">Select Blood Group</option>
+            <option>A+</option><option>A-</option>
+            <option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option>
+            <option>O+</option><option>O-</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Date of Joining</label>
+          <input type="date" name="joining_date" required>
+        </div>
+      </div>
+      <button class="btn" type="submit" id="idBtn">
+        <span id="idBtnIcon">🪪</span> Generate ID Card PDF
+      </button>
+    </form>
+    <div id="idMsg" class="msg"></div>
+    <p class="note">Downloads a print-ready PDF with front &amp; back of the ID card</p>
+  </div>
 </div>
+
 <script>
-  document.querySelector('form').addEventListener('submit', async function(e) {
+  function switchTab(name, el) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('tab-offer').style.display  = name === 'offer'  ? 'block' : 'none';
+    document.getElementById('tab-idcard').style.display = name === 'idcard' ? 'block' : 'none';
+  }
+
+  // ── Offer Letter submit ──────────────────────────────────────
+  document.getElementById('offerForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const btn = document.getElementById('btn');
-    const msg = document.getElementById('msg');
-    btn.textContent = 'Generating...'; btn.disabled = true;
+    const btn  = document.getElementById('offerBtn');
+    const icon = document.getElementById('offerBtnIcon');
+    const msg  = document.getElementById('offerMsg');
+    btn.disabled = true; icon.textContent = '⏳';
+    msg.style.display = 'none';
     try {
       const res = await fetch('/generate', {method:'POST', body: new FormData(this)});
       const status = res.headers.get('X-Email-Status');
       const err    = res.headers.get('X-Email-Error');
-      // Trigger download
-      const blob = await res.blob();
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      const empName = document.querySelector('[name="employee_name"]').value.trim().replace(/\s+/g, '_');
-      a.href = url; a.download = empName + '_Aparaitech_Offer.pdf'; a.click();
-      // Show status
+      const blob   = await res.blob();
+      const url    = URL.createObjectURL(blob);
+      const a      = document.createElement('a');
+      const name   = this.querySelector('[name="employee_name"]').value.trim().replace(/\s+/g,'_');
+      a.href = url; a.download = name + '_Aparaitech_Offer.pdf'; a.click();
       if (status === 'sent') {
-        msg.style.background = '#e6f9f0'; msg.style.color = '#1a7a4a';
-        msg.style.border = '1px solid #a3e4c1';
+        msg.style.cssText = 'background:#e6f9f0;color:#1a7a4a;border:1px solid #a3e4c1';
         msg.textContent = '✅ PDF downloaded & emailed to candidate successfully!';
       } else {
-        msg.style.background = '#fff4e5'; msg.style.color = '#b35a00';
-        msg.style.border = '1px solid #ffd699';
-        msg.textContent = `⚠️ PDF downloaded, but email failed: ${err}`;
+        msg.style.cssText = 'background:#fff4e5;color:#b35a00;border:1px solid #ffd699';
+        msg.textContent = '⚠️ PDF downloaded, but email failed: ' + err;
       }
       msg.style.display = 'block';
     } catch(ex) {
-      msg.style.background='#fdecea'; msg.style.color='#c0392b';
-      msg.style.border='1px solid #f5b7b1';
+      msg.style.cssText = 'background:#fdecea;color:#c0392b;border:1px solid #f5b7b1';
       msg.textContent = '❌ Error: ' + ex.message;
       msg.style.display = 'block';
     }
-    btn.textContent = 'Generate, Download & Send PDF'; btn.disabled = false;
+    btn.disabled = false; icon.textContent = '📄';
+  });
+
+  // ── ID Card submit ───────────────────────────────────────────
+  document.getElementById('idForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn  = document.getElementById('idBtn');
+    const icon = document.getElementById('idBtnIcon');
+    const msg  = document.getElementById('idMsg');
+    btn.disabled = true; icon.textContent = '⏳';
+    msg.style.display = 'none';
+    try {
+      const res = await fetch('/generate-id-card', {method:'POST', body: new FormData(this)});
+      if (!res.ok) throw new Error('Server error ' + res.status);
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      const name = this.querySelector('[name="employee_name"]').value.trim().replace(/\s+/g,'_');
+      const eid  = this.querySelector('[name="emp_id"]').value.trim();
+      a.href = url; a.download = name + '_' + eid + '_IDCard.pdf'; a.click();
+      msg.style.cssText = 'background:#e6f9f0;color:#1a7a4a;border:1px solid #a3e4c1';
+      msg.textContent = '✅ ID Card PDF downloaded successfully!';
+      msg.style.display = 'block';
+    } catch(ex) {
+      msg.style.cssText = 'background:#fdecea;color:#c0392b;border:1px solid #f5b7b1';
+      msg.textContent = '❌ Error: ' + ex.message;
+      msg.style.display = 'block';
+    }
+    btn.disabled = false; icon.textContent = '🪪';
   });
 </script>
+</body>
+</html>

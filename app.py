@@ -410,6 +410,310 @@ def generate():
     response.headers['Access-Control-Expose-Headers'] = 'X-Email-Status, X-Email-Error, X-Filename'
     return response
 
+
+# ── Employee ID Card Generator ────────────────────────────────────────────────
+
+def build_id_card(data):
+    """Generate a professional employee ID card (front + back) as a PDF."""
+    from reportlab.lib.pagesizes import landscape
+    from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate, Flowable
+    from reportlab.lib.utils import ImageReader
+    import textwrap
+
+    buf = io.BytesIO()
+
+    CARD_W = 3.375 * inch   # CR80 standard
+    CARD_H = 2.125 * inch
+
+    DARK_BLUE = colors.HexColor('#0d2b5e')
+    CYAN_COL  = colors.HexColor('#00aec7')
+    WHITE     = colors.white
+    LIGHT_BG  = colors.HexColor('#f0f6ff')
+    GREY_TXT  = colors.HexColor('#555555')
+    GOLD      = colors.HexColor('#f5a623')
+
+    emp_id       = data.get('emp_id', 'APC-0000')
+    emp_name     = data.get('employee_name', 'Employee Name')
+    position     = data.get('position', 'Software Engineer')
+    department   = data.get('department', 'Engineering')
+    email        = data.get('email', '')
+    phone        = data.get('phone', '')
+    blood_group  = data.get('blood_group', 'A+')
+    joining_date = data.get('joining_date', '')
+    try:
+        joining_display = datetime.strptime(joining_date, '%Y-%m-%d').strftime('%d %b %Y')
+    except:
+        joining_display = joining_date
+
+    logo_path = gp("logo.png")
+
+    PAGE_W = CARD_W + 1.0 * inch   # small margins
+    PAGE_H = CARD_H * 2 + 1.5 * inch
+
+    class FrontCard(Flowable):
+        def __init__(self):
+            Flowable.__init__(self)
+            self.width  = CARD_W
+            self.height = CARD_H
+
+        def draw(self):
+            c = self.canv
+            w, h = CARD_W, CARD_H
+
+            # Card shadow effect
+            c.saveState()
+            c.setFillColor(colors.HexColor('#cccccc'))
+            c.roundRect(3, -3, w, h, 8, fill=1, stroke=0)
+            c.restoreState()
+
+            # Card background
+            c.setFillColor(WHITE)
+            c.roundRect(0, 0, w, h, 8, fill=1, stroke=0)
+
+            # Top header band
+            c.setFillColor(DARK_BLUE)
+            c.roundRect(0, h - 0.56*inch, w, 0.56*inch, 8, fill=1, stroke=0)
+            c.setFillColor(DARK_BLUE)
+            c.rect(0, h - 0.56*inch, w, 0.28*inch, fill=1, stroke=0)
+
+            # Cyan accent stripe
+            c.setFillColor(CYAN_COL)
+            c.rect(0, h - 0.6*inch, w, 0.05*inch, fill=1, stroke=0)
+
+            # Logo in header
+            if os.path.exists(logo_path):
+                c.drawImage(logo_path, 0.08*inch, h - 0.52*inch,
+                            width=0.42*inch, height=0.38*inch,
+                            preserveAspectRatio=True, mask='auto')
+
+            # Company name in header
+            c.setFillColor(WHITE)
+            c.setFont('Helvetica-Bold', 7.2)
+            c.drawString(0.56*inch, h - 0.28*inch, 'APARAITECH SOFTWARE COMPANY')
+            c.setFont('Helvetica', 5.5)
+            c.setFillColor(CYAN_COL)
+            c.drawString(0.56*inch, h - 0.44*inch, 'We Build Your Vision')
+
+            # Photo placeholder area
+            photo_x = 0.12*inch
+            photo_y = h - 1.48*inch
+            photo_w = 0.72*inch
+            photo_h = 0.80*inch
+            c.setFillColor(LIGHT_BG)
+            c.setStrokeColor(CYAN_COL)
+            c.setLineWidth(1.2)
+            c.roundRect(photo_x, photo_y, photo_w, photo_h, 4, fill=1, stroke=1)
+            c.setFillColor(GREY_TXT)
+            c.setFont('Helvetica', 5)
+            c.drawCentredString(photo_x + photo_w/2, photo_y + photo_h/2 - 3, 'PHOTO')
+
+            # Employee info block (right side)
+            info_x = 0.96*inch
+            info_y = h - 0.84*inch
+
+            c.setFillColor(DARK_BLUE)
+            c.setFont('Helvetica-Bold', 8.5)
+            # Wrap name if too long
+            name_disp = emp_name if len(emp_name) <= 20 else emp_name[:19] + '…'
+            c.drawString(info_x, info_y, name_disp)
+
+            c.setFillColor(CYAN_COL)
+            c.setFont('Helvetica-Bold', 6.5)
+            c.drawString(info_x, info_y - 0.14*inch, position.upper())
+
+            c.setFillColor(GREY_TXT)
+            c.setFont('Helvetica', 5.8)
+            c.drawString(info_x, info_y - 0.27*inch, f'Dept: {department}')
+
+            # Divider
+            c.setStrokeColor(CYAN_COL)
+            c.setLineWidth(0.5)
+            c.line(info_x, info_y - 0.34*inch, w - 0.12*inch, info_y - 0.34*inch)
+
+            c.setFont('Helvetica-Bold', 5.5)
+            c.setFillColor(DARK_BLUE)
+            c.drawString(info_x, info_y - 0.45*inch, 'EMP ID:')
+            c.setFont('Helvetica', 5.5)
+            c.setFillColor(colors.black)
+            c.drawString(info_x + 0.42*inch, info_y - 0.45*inch, emp_id)
+
+            c.setFont('Helvetica-Bold', 5.5)
+            c.setFillColor(DARK_BLUE)
+            c.drawString(info_x, info_y - 0.57*inch, 'Joining:')
+            c.setFont('Helvetica', 5.5)
+            c.setFillColor(colors.black)
+            c.drawString(info_x + 0.42*inch, info_y - 0.57*inch, joining_display)
+
+            if email:
+                c.setFont('Helvetica', 5)
+                c.setFillColor(GREY_TXT)
+                email_disp = email if len(email) <= 28 else email[:27] + '…'
+                c.drawString(info_x, info_y - 0.70*inch, f'✉  {email_disp}')
+
+            # Bottom footer band
+            c.setFillColor(DARK_BLUE)
+            c.rect(0, 0, w, 0.28*inch, fill=1, stroke=0)
+            c.roundRect(0, 0, w, 0.14*inch, 8, fill=1, stroke=0)
+
+            c.setFillColor(WHITE)
+            c.setFont('Helvetica', 5.2)
+            c.drawCentredString(w/2, 0.09*inch, 'aparaitech.org  |  info@aparaitechsoftware.org')
+
+            # Blood group badge
+            c.setFillColor(colors.HexColor('#e74c3c'))
+            c.roundRect(w - 0.44*inch, 0.33*inch, 0.32*inch, 0.22*inch, 3, fill=1, stroke=0)
+            c.setFillColor(WHITE)
+            c.setFont('Helvetica-Bold', 6.5)
+            c.drawCentredString(w - 0.28*inch, 0.39*inch, blood_group)
+
+    class BackCard(Flowable):
+        def __init__(self):
+            Flowable.__init__(self)
+            self.width  = CARD_W
+            self.height = CARD_H
+
+        def draw(self):
+            c = self.canv
+            w, h = CARD_W, CARD_H
+
+            # Shadow
+            c.saveState()
+            c.setFillColor(colors.HexColor('#cccccc'))
+            c.roundRect(3, -3, w, h, 8, fill=1, stroke=0)
+            c.restoreState()
+
+            # Background
+            c.setFillColor(WHITE)
+            c.roundRect(0, 0, w, h, 8, fill=1, stroke=0)
+
+            # Top dark band
+            c.setFillColor(DARK_BLUE)
+            c.roundRect(0, h - 0.36*inch, w, 0.36*inch, 8, fill=1, stroke=0)
+            c.setFillColor(DARK_BLUE)
+            c.rect(0, h - 0.36*inch, w, 0.18*inch, fill=1, stroke=0)
+
+            c.setFillColor(WHITE)
+            c.setFont('Helvetica-Bold', 7)
+            c.drawCentredString(w/2, h - 0.24*inch, 'EMPLOYEE IDENTIFICATION CARD')
+
+            # Cyan stripe
+            c.setFillColor(CYAN_COL)
+            c.rect(0, h - 0.40*inch, w, 0.05*inch, fill=1, stroke=0)
+
+            # Magnetic stripe simulation
+            c.setFillColor(colors.HexColor('#2c2c2c'))
+            c.rect(0, h - 0.70*inch, w, 0.22*inch, fill=1, stroke=0)
+
+            # Info fields
+            def field_row(label, value, y_pos):
+                c.setFont('Helvetica-Bold', 5.8)
+                c.setFillColor(DARK_BLUE)
+                c.drawString(0.14*inch, y_pos, label + ':')
+                c.setFont('Helvetica', 5.8)
+                c.setFillColor(colors.black)
+                c.drawString(0.82*inch, y_pos, value)
+
+            row_start = h - 0.88*inch
+            row_gap   = 0.135*inch
+
+            field_row('Employee ID',  emp_id,           row_start)
+            field_row('Name',         emp_name,          row_start - row_gap)
+            field_row('Designation',  position,          row_start - 2*row_gap)
+            field_row('Department',   department,        row_start - 3*row_gap)
+            if phone:
+                field_row('Phone',    phone,             row_start - 4*row_gap)
+            field_row('Blood Group',  blood_group,       row_start - (5 if phone else 4)*row_gap)
+
+            # Divider line
+            c.setStrokeColor(CYAN_COL)
+            c.setLineWidth(0.5)
+            div_y = row_start - (6 if phone else 5)*row_gap + 0.02*inch
+            c.line(0.14*inch, div_y, w - 0.14*inch, div_y)
+
+            # Terms note
+            c.setFont('Helvetica', 4.5)
+            c.setFillColor(GREY_TXT)
+            terms = ("If found, please return to: Aparaitech Software Company, Baramati, Pune – 412306  |  "
+                     "This card is property of Aparaitech. Misuse is subject to disciplinary action.")
+            # Simple wrap
+            words = terms.split()
+            line_buf, lines_out = [], []
+            for word in words:
+                test = ' '.join(line_buf + [word])
+                if c.stringWidth(test, 'Helvetica', 4.5) < (w - 0.28*inch):
+                    line_buf.append(word)
+                else:
+                    lines_out.append(' '.join(line_buf))
+                    line_buf = [word]
+            if line_buf:
+                lines_out.append(' '.join(line_buf))
+
+            ty = div_y - 0.12*inch
+            for ln in lines_out[:3]:
+                c.drawCentredString(w/2, ty, ln)
+                ty -= 0.09*inch
+
+            # Bottom band
+            c.setFillColor(DARK_BLUE)
+            c.rect(0, 0, w, 0.28*inch, fill=1, stroke=0)
+            c.roundRect(0, 0, w, 0.14*inch, 8, fill=1, stroke=0)
+
+            # Barcode-like decoration (purely visual)
+            bar_x = w/2 - 0.55*inch
+            bar_y = 0.04*inch
+            bar_h = 0.18*inch
+            bar_widths = [1,2,1,3,1,2,2,1,3,1,2,1,1,3,1,2,1,2,1,1,3,2,1]
+            bx = bar_x
+            toggle = True
+            for bw in bar_widths:
+                bwp = bw * 0.018 * inch
+                if toggle:
+                    c.setFillColor(WHITE)
+                    c.rect(bx, bar_y, bwp, bar_h, fill=1, stroke=0)
+                bx += bwp
+                toggle = not toggle
+
+    from reportlab.platypus import SimpleDocTemplate, Spacer, HRFlowable
+
+    label_style = ParagraphStyle('lbl', fontSize=9, fontName='Helvetica-Bold',
+                                  textColor=DARK_BLUE, alignment=TA_CENTER, spaceAfter=4)
+    sub_style   = ParagraphStyle('sub', fontSize=7.5, fontName='Helvetica',
+                                  textColor=GREY, alignment=TA_CENTER, spaceAfter=8)
+
+    PAGE_W2 = CARD_W + 1.2*inch
+    PAGE_H2 = CARD_H * 2 + 2.2*inch
+
+    doc = SimpleDocTemplate(buf, pagesize=(PAGE_W2, PAGE_H2),
+                            leftMargin=0.6*inch, rightMargin=0.6*inch,
+                            topMargin=0.4*inch, bottomMargin=0.4*inch)
+
+    story = []
+    story.append(Paragraph("APARAITECH SOFTWARE COMPANY", label_style))
+    story.append(Paragraph("Employee ID Card", sub_style))
+    story.append(Paragraph("▶ FRONT", ParagraphStyle('fl', fontSize=7, fontName='Helvetica-Bold',
+                            textColor=CYAN_COL, spaceAfter=5, alignment=TA_LEFT)))
+    story.append(FrontCard())
+    story.append(Spacer(1, 0.28*inch))
+    story.append(Paragraph("▶ BACK", ParagraphStyle('bl', fontSize=7, fontName='Helvetica-Bold',
+                            textColor=CYAN_COL, spaceAfter=5, alignment=TA_LEFT)))
+    story.append(BackCard())
+    doc.build(story)
+    buf.seek(0)
+    return buf
+
+
+@app.route("/generate-id-card", methods=["POST"])
+@login_required
+def generate_id_card():
+    keys = ["employee_name", "emp_id", "position", "department",
+            "email", "phone", "blood_group", "joining_date"]
+    data = {k: request.form.get(k, '') for k in keys}
+    buf  = build_id_card(data)
+    safe = data['employee_name'].replace(' ', '_')
+    fname = f"{safe}_{data['emp_id']}_IDCard.pdf"
+    return send_file(buf, as_attachment=True, download_name=fname, mimetype="application/pdf")
+
+
 if __name__ == "__main__":
     app.run(debug=True)
 
